@@ -1,0 +1,6 @@
+gap	status	evidence	remaining_action
+true interface-similarity shielding	complete	S2b contact-Jaccard cold-interface split: 2677/574/573 train/valid/test rows; cluster overlaps zero=True; 2456 interface clusters.	Optional upgrade: add Foldseek/TM-align/PINDER clusters as a second interface axis.
+local Shield reruns include S2b	complete	Best S2b local model=sequence_random_forest AUPRC=0.857, MCC=0.320.	Use these as CPU baselines; headline SOTA comparisons require Colab/GPU outputs.
+SOTA/foundation-model baselines under identical Shield splits	compute_ready	Colab notebook and exact input zip are ready; no GPU output has been integrated yet.	Run colab/ptmppi_shield_gpu_baselines_colab.ipynb on a GPU runtime, then run scripts/integrate_colab_gpu_metrics.py locally.
+official external method reproducibility	partially_blocked	Blocked or artifact-limited methods: PhosPPI, DeepPhosPPI, PTM-Mamba	Do not claim official reproduction for PhosPPI, DeepPhosPPI, or PTM-Mamba unless missing weights/checkpoints/features are supplied.
+experimentally tested no-effect labels	scoped_out_binary_task	0 curated no-effect rows; no-effect schema and source queries exist.	Keep headline task enhance-vs-inhibit until >=100 high-confidence no-effect rows are curated.

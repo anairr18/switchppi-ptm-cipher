@@ -1,0 +1,5 @@
+split_col	group_col	train_rows	valid_rows	test_rows	train_valid_overlap	train_test_overlap	valid_test_overlap
+pair_disjoint_split	pair_key	2677	574	573	0	0	0
+modified_protein_disjoint_split	modified_uniprot	2677	574	573	0	0	0
+site_disjoint_split	site_key	2677	574	573	0	0	0
+pmid_disjoint_split	pmid	2677	574	573	0	0	0

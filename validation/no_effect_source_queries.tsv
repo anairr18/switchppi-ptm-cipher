@@ -1,0 +1,6 @@
+source	query	acceptance_rule
+IntAct FeatureTab / IMEx	"""phosphorylation"" ""no effect"" ""protein interaction"" site mutant"	Only accept rows where a modified site or mutation is explicitly tested for interaction change.
+BioGRID PTMREL / PTMTAB	"""phosphorylation"" ""does not affect binding"" ""co-immunoprecipitation"""	Require direct PPI assay evidence; do not infer no-effect from missing annotations.
+Peptide array / pull-down literature	"""phosphopeptide"" ""no binding"" ""14-3-3"" OR SH2 OR WW"	Accept only modified-vs-unmodified or mutant-vs-wild-type comparisons with a named partner.
+AP-MS / proximity labeling perturbation studies	"""site mutant"" ""interactome"" ""no significant change"" phosphorylation"	Require statistical no-change call for the named PPI under the perturbation.
+PhosphoSitePlus licensed exports	Regulatory site interaction effects where effect is explicitly absent or unchanged.	Use only if licensing permits; keep provenance and evidence text.

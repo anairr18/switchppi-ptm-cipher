@@ -1,0 +1,23 @@
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+colab/ptmppi_shield_colab_inputs/
+
+# Large or re-downloadable raw data
+data/raw/ptmint_structure_information/
+data/raw/ptmint_protein_structure_information.zip
+data/external/
+
+# Third-party method checkouts and bulky binary artifacts
+external_methods/
+models/
+models_v2/
+models_v3/
+*.joblib
+*.pkl
+*.pt
+
+# Local runtime outputs
+ptm_cipher_3di_outputs/
+ptm_cipher_outputs/
+*.tmp

@@ -1,0 +1,284 @@
+{
+  "backend": {
+    "modified_protein_disjoint": "deterministic",
+    "pair_disjoint": "deterministic",
+    "pmid_disjoint": "deterministic",
+    "random": "deterministic",
+    "site_disjoint": "deterministic"
+  },
+  "benchmark_split": "all",
+  "elapsed_seconds": 455.78,
+  "label_counts": {
+    "modified_protein_disjoint": {
+      "Enhance": 3073,
+      "Induce": 75,
+      "Inhibit": 1505
+    },
+    "pair_disjoint": {
+      "Enhance": 3073,
+      "Induce": 75,
+      "Inhibit": 1505
+    },
+    "pmid_disjoint": {
+      "Enhance": 3073,
+      "Induce": 75,
+      "Inhibit": 1505
+    },
+    "random": {
+      "Enhance": 3073,
+      "Induce": 75,
+      "Inhibit": 1505
+    },
+    "site_disjoint": {
+      "Enhance": 3073,
+      "Induce": 75,
+      "Inhibit": 1505
+    }
+  },
+  "rows": {
+    "modified_protein_disjoint": 4653,
+    "pair_disjoint": 4653,
+    "pmid_disjoint": 4653,
+    "random": 4653,
+    "site_disjoint": 4653
+  },
+  "split_counts": {
+    "modified_protein_disjoint": {
+      "test": 931,
+      "train": 3257,
+      "val": 465
+    },
+    "pair_disjoint": {
+      "test": 931,
+      "train": 3257,
+      "val": 465
+    },
+    "pmid_disjoint": {
+      "test": 931,
+      "train": 3257,
+      "val": 465
+    },
+    "random": {
+      "test": 931,
+      "train": 3257,
+      "val": 465
+    },
+    "site_disjoint": {
+      "test": 931,
+      "train": 3257,
+      "val": 465
+    }
+  },
+  "strategies": {
+    "modified_protein_disjoint": {
+      "backend": "deterministic",
+      "benchmark_split": "modified_protein_disjoint",
+      "elapsed_seconds": 78.83,
+      "feature_files": {
+        "feature_npz": "C:\\Users\\Aadi Nair\\switchppi_sprint\\data\\processed\\feature_cache\\row_features_modified_protein_disjoint_deterministic.npz",
+        "metadata_csv": "C:\\Users\\Aadi Nair\\switchppi_sprint\\data\\processed\\feature_cache\\row_metadata_modified_protein_disjoint_deterministic.csv"
+      },
+      "feature_meta": {
+        "combined_dim": 1507,
+        "mechanism_categorical_columns": [
+          "ptm",
+          "residue",
+          "organism",
+          "same_uniprot",
+          "has_full_mod_sequence",
+          "has_full_partner_sequence",
+          "has_site_window"
+        ],
+        "mechanism_dim": 27,
+        "mechanism_numeric_columns": [
+          "site",
+          "site_log1p",
+          "mod_length_log1p",
+          "partner_length_log1p",
+          "window_length",
+          "site_fraction"
+        ],
+        "sequence_embedding_dim": 1480
+      },
+      "label_counts": {
+        "Enhance": 3073,
+        "Induce": 75,
+        "Inhibit": 1505
+      },
+      "rows": 4653,
+      "split_counts": {
+        "test": 931,
+        "train": 3257,
+        "val": 465
+      }
+    },
+    "pair_disjoint": {
+      "backend": "deterministic",
+      "benchmark_split": "pair_disjoint",
+      "elapsed_seconds": 69.11,
+      "feature_files": {
+        "feature_npz": "C:\\Users\\Aadi Nair\\switchppi_sprint\\data\\processed\\feature_cache\\row_features_pair_disjoint_deterministic.npz",
+        "metadata_csv": "C:\\Users\\Aadi Nair\\switchppi_sprint\\data\\processed\\feature_cache\\row_metadata_pair_disjoint_deterministic.csv"
+      },
+      "feature_meta": {
+        "combined_dim": 1507,
+        "mechanism_categorical_columns": [
+          "ptm",
+          "residue",
+          "organism",
+          "same_uniprot",
+          "has_full_mod_sequence",
+          "has_full_partner_sequence",
+          "has_site_window"
+        ],
+        "mechanism_dim": 27,
+        "mechanism_numeric_columns": [
+          "site",
+          "site_log1p",
+          "mod_length_log1p",
+          "partner_length_log1p",
+          "window_length",
+          "site_fraction"
+        ],
+        "sequence_embedding_dim": 1480
+      },
+      "label_counts": {
+        "Enhance": 3073,
+        "Induce": 75,
+        "Inhibit": 1505
+      },
+      "rows": 4653,
+      "split_counts": {
+        "test": 931,
+        "train": 3257,
+        "val": 465
+      }
+    },
+    "pmid_disjoint": {
+      "backend": "deterministic",
+      "benchmark_split": "pmid_disjoint",
+      "elapsed_seconds": 120.73,
+      "feature_files": {
+        "feature_npz": "C:\\Users\\Aadi Nair\\switchppi_sprint\\data\\processed\\feature_cache\\row_features_pmid_disjoint_deterministic.npz",
+        "metadata_csv": "C:\\Users\\Aadi Nair\\switchppi_sprint\\data\\processed\\feature_cache\\row_metadata_pmid_disjoint_deterministic.csv"
+      },
+      "feature_meta": {
+        "combined_dim": 1508,
+        "mechanism_categorical_columns": [
+          "ptm",
+          "residue",
+          "organism",
+          "same_uniprot",
+          "has_full_mod_sequence",
+          "has_full_partner_sequence",
+          "has_site_window"
+        ],
+        "mechanism_dim": 28,
+        "mechanism_numeric_columns": [
+          "site",
+          "site_log1p",
+          "mod_length_log1p",
+          "partner_length_log1p",
+          "window_length",
+          "site_fraction"
+        ],
+        "sequence_embedding_dim": 1480
+      },
+      "label_counts": {
+        "Enhance": 3073,
+        "Induce": 75,
+        "Inhibit": 1505
+      },
+      "rows": 4653,
+      "split_counts": {
+        "test": 931,
+        "train": 3257,
+        "val": 465
+      }
+    },
+    "random": {
+      "backend": "deterministic",
+      "benchmark_split": "random",
+      "elapsed_seconds": 120.56,
+      "feature_files": {
+        "feature_npz": "C:\\Users\\Aadi Nair\\switchppi_sprint\\data\\processed\\feature_cache\\row_features_random_deterministic.npz",
+        "metadata_csv": "C:\\Users\\Aadi Nair\\switchppi_sprint\\data\\processed\\feature_cache\\row_metadata_random_deterministic.csv"
+      },
+      "feature_meta": {
+        "combined_dim": 1508,
+        "mechanism_categorical_columns": [
+          "ptm",
+          "residue",
+          "organism",
+          "same_uniprot",
+          "has_full_mod_sequence",
+          "has_full_partner_sequence",
+          "has_site_window"
+        ],
+        "mechanism_dim": 28,
+        "mechanism_numeric_columns": [
+          "site",
+          "site_log1p",
+          "mod_length_log1p",
+          "partner_length_log1p",
+          "window_length",
+          "site_fraction"
+        ],
+        "sequence_embedding_dim": 1480
+      },
+      "label_counts": {
+        "Enhance": 3073,
+        "Induce": 75,
+        "Inhibit": 1505
+      },
+      "rows": 4653,
+      "split_counts": {
+        "test": 931,
+        "train": 3257,
+        "val": 465
+      }
+    },
+    "site_disjoint": {
+      "backend": "deterministic",
+      "benchmark_split": "site_disjoint",
+      "elapsed_seconds": 66.55,
+      "feature_files": {
+        "feature_npz": "C:\\Users\\Aadi Nair\\switchppi_sprint\\data\\processed\\feature_cache\\row_features_site_disjoint_deterministic.npz",
+        "metadata_csv": "C:\\Users\\Aadi Nair\\switchppi_sprint\\data\\processed\\feature_cache\\row_metadata_site_disjoint_deterministic.csv"
+      },
+      "feature_meta": {
+        "combined_dim": 1508,
+        "mechanism_categorical_columns": [
+          "ptm",
+          "residue",
+          "organism",
+          "same_uniprot",
+          "has_full_mod_sequence",
+          "has_full_partner_sequence",
+          "has_site_window"
+        ],
+        "mechanism_dim": 28,
+        "mechanism_numeric_columns": [
+          "site",
+          "site_log1p",
+          "mod_length_log1p",
+          "partner_length_log1p",
+          "window_length",
+          "site_fraction"
+        ],
+        "sequence_embedding_dim": 1480
+      },
+      "label_counts": {
+        "Enhance": 3073,
+        "Induce": 75,
+        "Inhibit": 1505
+      },
+      "rows": 4653,
+      "split_counts": {
+        "test": 931,
+        "train": 3257,
+        "val": 465
+      }
+    }
+  }
+}

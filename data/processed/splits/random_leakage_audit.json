@@ -1,0 +1,66 @@
+{
+  "assignment_metadata": {
+    "actual_counts": {
+      "test": 931,
+      "train": 3257,
+      "validation": 465
+    },
+    "label_counts": {
+      "test": {
+        "Enhance": 600,
+        "Induce": 14,
+        "Inhibit": 317
+      },
+      "train": {
+        "Enhance": 2164,
+        "Induce": 56,
+        "Inhibit": 1037
+      },
+      "validation": {
+        "Enhance": 309,
+        "Induce": 5,
+        "Inhibit": 151
+      }
+    },
+    "stratified_by_label": true,
+    "target_counts": {
+      "test": 931,
+      "train": 3257,
+      "validation": 465
+    },
+    "unit_count": 4653
+  },
+  "constraint": null,
+  "degree_only_feature_source": "all_train_rows",
+  "examples": [],
+  "forbidden_entity_overlap_count": null,
+  "generated_at": "2026-06-20T17:58:01+00:00",
+  "label_distribution": {
+    "test": {
+      "Enhance": 600,
+      "Induce": 14,
+      "Inhibit": 317
+    },
+    "train": {
+      "Enhance": 2164,
+      "Induce": 56,
+      "Inhibit": 1037
+    },
+    "validation": {
+      "Enhance": 309,
+      "Induce": 5,
+      "Inhibit": 151
+    }
+  },
+  "partition_counts": {
+    "test": 931,
+    "train": 3257,
+    "validation": 465
+  },
+  "passed": true,
+  "split_name": "random",
+  "train_test_overlap_count": null,
+  "unit_metadata": {
+    "unit_count": 4653
+  }
+}

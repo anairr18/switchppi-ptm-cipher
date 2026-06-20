@@ -1,0 +1,32 @@
+reason	Peptide Candidate	Majority.protein.IDs	Gene.name	Median.SILAC.ratio.phos_mut	Median.SILAC.ratio.wt_mut	Median.SILAC.ratio.wt_phos	LFQsignificantWt	LFQsignificantMut	LFQsignificantPhos
+ambiguous or mutation-dominant differential interaction	COL5A1_Ser884Phe	P10606;Q6FHM4;Q6FHJ9	COX5B	-1.03558794608446			-	+	-
+ambiguous or mutation-dominant differential interaction	COL5A1_Ser884Phe	A8K0D2;A0A1Y1B909;A0A024R5F7;Q9UBM7;X5DNI9;E9PJ54;A0A1Y1BG54;A0A1Y1BBN3;X5D9E1;E9PM00;A0A0S2Z3S3;B4E1K5;X5DRD7	DHCR7	-1.57302826793611	-1.31001973788092		-	+	-
+ambiguous or mutation-dominant differential interaction	COL5A1_Ser884Phe	A0A024R3J7;P46977;P46977-2	hCG_2032701;STT3A	-1.00857978385701			-	+	-
+ambiguous or mutation-dominant differential interaction	COL5A1_Ser884Phe	A0A024R6Y2;P61970;H3BRV9	NUTF2	-2.41937199088343	-1.53398685537922		+	+	+
+ambiguous or mutation-dominant differential interaction	COL5A1_Ser884Phe	B3KNF6;B4DR61;P61619;P61619-3	SEC61A1		-1.20237136958054		-	+	-
+ambiguous or mutation-dominant differential interaction	COL5A1_Ser884Phe	Q5T8U5;Q5T8U7;O15260-2;O15260;B7Z8F3;B7Z7A8;B7Z605;O15260-3	SURF4	-1.2834402109197	-1.22672077970051		-	+	-
+ambiguous or mutation-dominant differential interaction	DES_Thr442Ile	Q14257;Q14257-2;A8MXP8;H0YL43	RCN2	-2.70122588864641	-1.95058613004651		+	+	+
+ambiguous or mutation-dominant differential interaction	EGFR_Tyr1092Ala	B7Z4V2;V9HW84;P38646;Q8N1C8;B7Z4T3;B7Z1V7	HEL-S-124m;HSPA9	-1.11534780891406			+	+	+
+ambiguous or mutation-dominant differential interaction	EID1_Ser8Cys	Q12996;B4DFQ5	CSTF3		-1.39142871194094		-	+	+
+ambiguous or mutation-dominant differential interaction	EID1_Ser8Cys	A0A024R2Z6;Q9BVP2-2;Q9BVP2	GNL3		-1.40558602393427		-	+	+
+ambiguous or mutation-dominant differential interaction	EID1_Ser8Cys	A0A024QZV0;Q86UY0;Q6EHZ3;Q658S9;Q8NBS9-2;Q8NBS9	hCG_1811539;TXNDC5;STRF8;DKFZp666I134	-1.18962583884089	-1.24715666132979		-	+	-
+ambiguous or mutation-dominant differential interaction	EID1_Ser8Cys	Q5SSJ5;Q5SSJ5-2;Q5SSJ5-3;B0QZK4;X6RGJ2	HP1BP3		-1.19555080911781		-	+	+
+ambiguous or mutation-dominant differential interaction	EID1_Ser8Cys	H0Y9X1;Q96EY4;D6RA57;D6RE67;D6RC31;B7Z504	TMA16	-1.0143971659622			-	+	+
+ambiguous or mutation-dominant differential interaction	EID1_Ser8Cys	H3BS42;A0A024QZC8;Q9H5H4;B7Z2Y7;B2RD90	ZNF768;FLJ23436		-1.49337957002033		-	+	-
+ambiguous or mutation-dominant differential interaction	GPR158_Thr759Met	Q9Y230;B3KNL2;Q9Y230-2;M0R0Y3	RUVBL2	1.78235186008546			-	+	+
+ambiguous or mutation-dominant differential interaction	MLH1_Tyr379Cys	Q9H3K6;A0A087WZT3;Q9H3K6-2	BOLA2	-1.27309988252502			-	+	-
+ambiguous or mutation-dominant differential interaction	MLH1_Tyr379Cys	A0A024QZT9;P16083;B3KPX6;Q5TD07	NQO2	1.14421120265904			+	+	+
+ambiguous or mutation-dominant differential interaction	MLH1_Tyr379Cys	H9ZYJ2;P10599;P10599-2	TXN	-2.6886192430827	-2.0537346836481		-	+	-
+ambiguous or mutation-dominant differential interaction	NRAP_Ser169Arg	E7ETK0;A0A2R8Y849;A0A087WUS0;A0A2R8YD14;P62847-2;P62847-3;P62847;P62847-4;A0A2R8Y8A0	RPS24	-2.24389260490477	-1.75623817747235		-	+	-
+ambiguous or mutation-dominant differential interaction	SYNRG_Ser1021Leu	Q9UIG0-2;Q9UIG0	BAZ1B	1.35169552063535			+	+	+
+ambiguous or mutation-dominant differential interaction	SYNRG_Ser1021Leu	Q9Y6A4;B4DN94	CFAP20		-1.03153592877579		-	+	+
+ambiguous or mutation-dominant differential interaction	SYNRG_Ser1021Leu	A0A024R7S3;P09497-2;P09497	CLTB	-1.06200162740009			-	+	-
+ambiguous or mutation-dominant differential interaction	SYNRG_Ser1021Leu	Q8IXB1;Q8IXB1-2;B3KNK5;Q6YPB0;B4DP04;Q8IXB1-3	DNAJC10	-2.41003673644376			-	+	-
+ambiguous or mutation-dominant differential interaction	SYNRG_Ser1021Leu	B2R5J1;H6UMI1;Q6IAW1;O95166;I3L3J4	GABARAP		-1.38254642273919		+	+	+
+ambiguous or mutation-dominant differential interaction	SYNRG_Ser1021Leu	Q5SSJ5;Q5SSJ5-2;Q5SSJ5-3;B0QZK4;X6RGJ2	HP1BP3	1.09461980748941			+	+	+
+ambiguous or mutation-dominant differential interaction	SYNRG_Ser1021Leu	F5H8H2;B2RDU6;Q59ET9;Q03426;B7Z301;A0A1B0GWC2;B7Z1C2	MVK	-2.12890946831022			+	+	+
+ambiguous or mutation-dominant differential interaction	SYNRG_Ser1021Leu	B2R841;P53350;B4E083;Q59GD0;D3DWF3	PLK1	-1.03959523848034	-1.38580557164522		-	+	+
+ambiguous or mutation-dominant differential interaction	SYNRG_Ser1021Leu	Q14684-2;Q14684	RRP1B	1.30338379037216			+	+	+
+ambiguous or mutation-dominant differential interaction	SYNRG_Ser1021Leu	E9PF19;A0A0S2Z5F3;Q8N2L6;B2RB52;Q9Y4P3;B4DY50;Q96E41;B4DY59	TBL2	1.03305376573849			+	+	+
+ambiguous or mutation-dominant differential interaction	SYNRG_Ser1021Leu	E9PKP7;P17480-2;P17480;A8K962;B4DNQ1;Q05BZ1;O00164	UBTF	1.50940223660818			+	+	+
+ambiguous or mutation-dominant differential interaction	TNNT2_Ser189Phe	A0A024QZK8;P31942-2;P31942;Q53F48;B4DHY1;P31942-3;A0A024QZP1;P31942-4	HNRPH3;HNRNPH3	-1.22934303378454			-	+	-

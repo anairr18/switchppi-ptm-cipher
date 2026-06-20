@@ -1,0 +1,26 @@
+PTM-PPI Shield v2 central claim:
+This package is now a leakage-audited, structure-anchored evaluation framework for signed PTM-regulated protein-interaction effects. It should be framed as a methodological evaluation and discovery-readiness platform, not as a finished foundation model.
+Dataset:
+3824 nonredundant PTM-PPI evidence events; 2054 PMIDs; 10 assay families; all events have PubMed year metadata.
+Best shielded result:
+Full-shield best non-control model: sequence_random_forest AUPRC=0.920, MCC=0.368.
+Best Robust Discovery Score across non-random shield splits: sequence_random_forest score=0.844.
+Random-split results are implementation checks, not discovery claims.
+External and biological validity:
+External validation: best ranking model sequence_random_forest on 108 PRISMA rows AUPRC=0.959, AUROC=0.883; best thresholded model counterfactual_logistic MCC=0.530, balanced_accuracy=0.749.
+Structure mapping: 3646 events have exact chain-to-UniProt support; 645 PTM sites are listed at interfaces; 65 have recorded contacts. Same-residue null enrichment=1.40; actual/null distance ratio=0.76.
+DeepPhosPPI public DatasetB lineage audit is complete: 3309 rows overlap the current event table after +1 site correction, with label agreement=0.994.
+What is now novel:
+1. Multi-axis leakage graph over evidence events, not only pair/site split columns.
+2. PTM-specific shield axes: motif-window, kinase proxy, assay family, publication/source, topology community, and full-shield leakage component.
+3. Counterfactual feature construction with unmodified state, modified state, and explicit PTM-chemistry delta features.
+4. Exact PTMint structure-chain-to-UniProt mapping plus residue-matched interface localization audit.
+5. Competitor data-lineage audit showing DeepPhosPPI DatasetB nearly recapitulates the current PTMint-derived event table after +1 coordinate correction.
+Still missing for Nature Computational Science:
+1. True interface-similarity shielding with Foldseek/TM-align/contact-Jaccard/PINDER clusters, not only mapped interface localization.
+2. Fair reruns of PhosPPI, DeepPhosPPI, PTM-Mamba embeddings, ELM rules, SIGNOR/OmniPath propagation, and structure-aware baselines under identical Shield splits.
+3. Expansion of prospective validation beyond the current Rrustemi2024 PRISMA set.
+4. Real ESM/PTM-Mamba/PTM-token model training on GPU.
+5. Experimentally tested no-effect labels; unknown or unlabeled PPIs must not be treated as no-effect negatives.
+Safe manuscript sentence:
+We introduce PTM-PPI Shield, a multi-axis leakage-audited evaluation framework for signed PTM-regulated protein-interaction effects, and show that claims about PTM-conditioned interactome rewiring change materially under publication, assay, topology, motif, homology, temporal, and structure-aware audits.

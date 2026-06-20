@@ -1,0 +1,18 @@
+{
+  "benchmark_rows": 3824,
+  "cuda_available": false,
+  "dropped_duplicates": 829,
+  "dropped_invalid_residue": 41,
+  "dropped_missing_sequence": 0,
+  "dropped_unknown_label": 0,
+  "embedding_mode_used": "deterministic_hashed_sequence_features",
+  "esm_model_attempted": false,
+  "esm_model_loaded": false,
+  "raw_rows": 4694,
+  "torch_available": true,
+  "unique_modified_proteins": 1165,
+  "unique_partner_proteins": 1109,
+  "unique_pmids": 2054,
+  "unique_sites": 2463,
+  "unique_unordered_pairs": 2350
+}

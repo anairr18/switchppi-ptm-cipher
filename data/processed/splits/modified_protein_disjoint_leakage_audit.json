@@ -1,0 +1,70 @@
+{
+  "assignment_metadata": {
+    "actual_counts": {
+      "test": 931,
+      "train": 3257,
+      "validation": 465
+    },
+    "label_counts": {
+      "test": {
+        "Enhance": 641,
+        "Induce": 4,
+        "Inhibit": 286
+      },
+      "train": {
+        "Enhance": 2126,
+        "Induce": 58,
+        "Inhibit": 1073
+      },
+      "validation": {
+        "Enhance": 306,
+        "Induce": 13,
+        "Inhibit": 146
+      }
+    },
+    "stratified_by_label": true,
+    "target_counts": {
+      "test": 931,
+      "train": 3257,
+      "validation": 465
+    },
+    "unit_count": 1165
+  },
+  "constraint": "modified protein",
+  "degree_only_feature_source": "all_train_rows",
+  "examples": [],
+  "forbidden_entity_count": 1165,
+  "forbidden_entity_overlap_count": 0,
+  "generated_at": "2026-06-20T17:58:01+00:00",
+  "label_distribution": {
+    "test": {
+      "Enhance": 641,
+      "Induce": 4,
+      "Inhibit": 286
+    },
+    "train": {
+      "Enhance": 2126,
+      "Induce": 58,
+      "Inhibit": 1073
+    },
+    "validation": {
+      "Enhance": 306,
+      "Induce": 13,
+      "Inhibit": 146
+    }
+  },
+  "partition_counts": {
+    "test": 931,
+    "train": 3257,
+    "validation": 465
+  },
+  "passed": true,
+  "split_name": "modified_protein_disjoint",
+  "train_test_overlap_count": 0,
+  "unit_metadata": {
+    "component_count": 1165,
+    "entity_count": 1165,
+    "largest_component_rows": 80,
+    "missing_entity_rows": 0
+  }
+}

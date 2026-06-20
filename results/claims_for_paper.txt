@@ -1,0 +1,23 @@
+Final central claim:
+A nonredundant, leakage-audited benchmark for signed PTM-regulated PPI effects shows that strict site-disjoint evaluation remains learnable, but hub/degree baselines are strong and must be reported as first-class controls. The model result should be framed as a robust baseline improvement, not as a solved predictor.
+
+Strongest result:
+After QC, the benchmark contains 3824 PTM-regulated PPI evidence rows, 2463 unique PTM sites, 2350 unordered protein pairs, and 2054 PMIDs. On the site-disjoint split, the best non-control model is random_forest with AUPRC=0.907 and AUROC=0.806. The random-split best AUPRC is 0.959, which should be shown only as a leakage-sensitivity contrast.
+
+Validity controls:
+The site-disjoint degree-only baseline has AUPRC=0.838. The shuffled-label control has AUPRC=0.736. The best site-disjoint ablation is partner_only AUPRC=0.850. Split leakage audits are saved in results/tables/split_leakage_report.tsv and should be reported before random-split results.
+
+Weakest result / limitation:
+This sprint used PTMint as the primary positive evidence source and did not establish true no-effect negatives or independent experimental validation. ESM2 embeddings were not used in the completed run unless the runtime reported GPU/model availability; deterministic sequence hashes and mechanism features were used as the fast fallback. Claims must avoid clinical, causal, or experimentally validated language.
+
+Novelty positioning:
+Do not claim the first PTM-PPI database or first phosphorylation-PPI predictor. PTMint, PhosPPI, DeepPhosPPI, PTMcode, SIGNOR/OmniPath, BioGRID PTM, and ELM already cover adjacent territory. The safest novelty claim is the strict, leakage-audited signed PTM-PPI effect benchmark with explicit degree/shuffled-label controls and reusable baselines.
+
+Exact journal fit recommendation:
+Best immediate fit is Briefings in Bioinformatics if framed as a leakage-resistant benchmark plus method/resource for PTM-conditioned interactome learning. Nucleic Acids Research becomes stronger if the dataset/resource is hardened into a public web/server or database-style resource. Nature Communications or Nature Computational Science requires an external validation set, ideally perturbation AP-MS/proximity labeling or phosphomimetic/non-phosphorylatable mutant interaction evidence.
+
+Unsafe claims to avoid:
+Do not claim discovery of novel interactions, clinical utility, causal mechanisms, or state-of-the-art superiority unless all competing methods are re-run under identical strict splits. Do not treat unlabeled pairs as no-effect negatives.
+
+Next validation needed for Nature-level submission:
+Freeze the benchmark and model, then test on independent post-training evidence or collaborator data: kinase/phosphatase perturbation phosphoproteomics paired with AP-MS/proximity labeling, phosphomimetic/non-phosphorylatable mutant PPI assays, or time-split PTM-PPI literature released after the benchmark cutoff.

@@ -1,0 +1,9 @@
+metric	value	interpretation
+deepphosppi_public_rows	3389.0	Rows in public DeepPhosPPI DatasetB protein list.
+raw_position_residue_match_rate	0.06875184420182945	Residue agreement if the released position is treated as one-based.
+plus1_position_residue_match_rate	1.0	Residue agreement if the released position is corrected by +1.
+raw_key_overlap_with_current_event_table	54.0	Exact gene/partner/site/effect-key overlap without position correction.
+plus1_key_overlap_with_current_event_table	3309.0	Exact gene/partner/site-key overlap after +1 site correction.
+plus1_overlap_label_agreement_rate	0.9939558779087337	Agreement between DeepPhosPPI labels and the current normalized enhance/inhibit labels on overlapping +1-corrected rows.
+deepphosppi_train_rows_overlapping_current_event_table	2924.0	DeepPhosPPI public train rows that appear in the current event table after +1 correction.
+deepphosppi_test_rows_overlapping_current_event_table	56.0	DeepPhosPPI public test rows that appear in the current event table after +1 correction.

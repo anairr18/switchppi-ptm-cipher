@@ -1,0 +1,111 @@
+# Runtime Notes
+
+- Backend: {'modified_protein_disjoint': 'deterministic', 'pair_disjoint': 'deterministic', 'pmid_disjoint': 'deterministic', 'random': 'deterministic', 'site_disjoint': 'deterministic'}
+- Benchmark split: all
+- Rows: {'modified_protein_disjoint': 4653, 'pair_disjoint': 4653, 'pmid_disjoint': 4653, 'random': 4653, 'site_disjoint': 4653}
+- Split counts: `{"modified_protein_disjoint": {"test": 931, "train": 3257, "val": 465}, "pair_disjoint": {"test": 931, "train": 3257, "val": 465}, "pmid_disjoint": {"test": 931, "train": 3257, "val": 465}, "random": {"test": 931, "train": 3257, "val": 465}, "site_disjoint": {"test": 931, "train": 3257, "val": 465}}`
+- Label counts: `{"modified_protein_disjoint": {"Enhance": 3073, "Induce": 75, "Inhibit": 1505}, "pair_disjoint": {"Enhance": 3073, "Induce": 75, "Inhibit": 1505}, "pmid_disjoint": {"Enhance": 3073, "Induce": 75, "Inhibit": 1505}, "random": {"Enhance": 3073, "Induce": 75, "Inhibit": 1505}, "site_disjoint": {"Enhance": 3073, "Induce": 75, "Inhibit": 1505}}`
+- Elapsed seconds: 455.78
+
+## Notes
+
+- Requested split strategy: all.
+- Training seed: 20260620.
+- Benchmark split strategy: modified_protein_disjoint.
+- Feature seed: 20260620.
+- Benchmark split strategy: modified_protein_disjoint.
+- Consumed auditor split files: data\processed\splits\modified_protein_disjoint.csv.
+- Split sizes: {"test": 931, "train": 3257, "val": 465}.
+- Loaded 1880 sequences from data\raw\uniprot_sequences.json.
+- Loaded 0 additional sequences from data\raw\uniprot_ptmint_accessions.fasta.
+- Rows missing full modified-protein sequence: 0/4653.
+- Rows missing full partner-protein sequence: 0/4653.
+- CUDA unavailable; falling back to deterministic sequence features.
+- Wrote row feature matrix: C:\Users\Aadi Nair\switchppi_sprint\data\processed\feature_cache\row_features_modified_protein_disjoint_deterministic.npz.
+- Embedding backend=deterministic, base_dim=296, row_dim=1480.
+- Fit majority in 0.00s.
+- Fit logistic_regression_mechanism in 0.26s.
+- Fit tree_baseline_mechanism in 1.75s.
+- Fit sequence_embedding_logistic in 46.07s.
+- Fit combined_mechanism_aware in 9.23s.
+- Fit mlp_sequence_embedding in 1.79s.
+- Training/evaluation elapsed: 78.83s.
+- Training seed: 20260620.
+- Benchmark split strategy: pair_disjoint.
+- Feature seed: 20260620.
+- Benchmark split strategy: pair_disjoint.
+- Consumed auditor split files: data\processed\splits\pair_disjoint.csv.
+- Split sizes: {"test": 931, "train": 3257, "val": 465}.
+- Loaded 1880 sequences from data\raw\uniprot_sequences.json.
+- Loaded 0 additional sequences from data\raw\uniprot_ptmint_accessions.fasta.
+- Rows missing full modified-protein sequence: 0/4653.
+- Rows missing full partner-protein sequence: 0/4653.
+- CUDA unavailable; falling back to deterministic sequence features.
+- Wrote row feature matrix: C:\Users\Aadi Nair\switchppi_sprint\data\processed\feature_cache\row_features_pair_disjoint_deterministic.npz.
+- Embedding backend=deterministic, base_dim=296, row_dim=1480.
+- Fit majority in 0.00s.
+- Fit logistic_regression_mechanism in 0.12s.
+- Fit tree_baseline_mechanism in 1.41s.
+- Fit sequence_embedding_logistic in 43.47s.
+- Fit combined_mechanism_aware in 11.07s.
+- Fit mlp_sequence_embedding in 1.99s.
+- Training/evaluation elapsed: 69.11s.
+- Training seed: 20260620.
+- Benchmark split strategy: pmid_disjoint.
+- Feature seed: 20260620.
+- Benchmark split strategy: pmid_disjoint.
+- Consumed auditor split files: data\processed\splits\pmid_disjoint.csv.
+- Split sizes: {"test": 931, "train": 3257, "val": 465}.
+- Loaded 1880 sequences from data\raw\uniprot_sequences.json.
+- Loaded 0 additional sequences from data\raw\uniprot_ptmint_accessions.fasta.
+- Rows missing full modified-protein sequence: 0/4653.
+- Rows missing full partner-protein sequence: 0/4653.
+- CUDA unavailable; falling back to deterministic sequence features.
+- Wrote row feature matrix: C:\Users\Aadi Nair\switchppi_sprint\data\processed\feature_cache\row_features_pmid_disjoint_deterministic.npz.
+- Embedding backend=deterministic, base_dim=296, row_dim=1480.
+- Fit majority in 0.00s.
+- Fit logistic_regression_mechanism in 0.18s.
+- Fit tree_baseline_mechanism in 1.91s.
+- Fit sequence_embedding_logistic in 90.72s.
+- Fit combined_mechanism_aware in 14.96s.
+- Fit mlp_sequence_embedding in 3.57s.
+- Training/evaluation elapsed: 120.73s.
+- Training seed: 20260620.
+- Benchmark split strategy: random.
+- Feature seed: 20260620.
+- Benchmark split strategy: random.
+- Consumed auditor split files: data\processed\splits\random.csv.
+- Split sizes: {"test": 931, "train": 3257, "val": 465}.
+- Loaded 1880 sequences from data\raw\uniprot_sequences.json.
+- Loaded 0 additional sequences from data\raw\uniprot_ptmint_accessions.fasta.
+- Rows missing full modified-protein sequence: 0/4653.
+- Rows missing full partner-protein sequence: 0/4653.
+- CUDA unavailable; falling back to deterministic sequence features.
+- Loaded cached row feature matrix: C:\Users\Aadi Nair\switchppi_sprint\data\processed\feature_cache\row_features_random_deterministic.npz.
+- Fit majority in 0.00s.
+- Fit logistic_regression_mechanism in 0.13s.
+- Fit tree_baseline_mechanism in 1.58s.
+- Fit sequence_embedding_logistic in 98.63s.
+- Fit combined_mechanism_aware in 11.01s.
+- Fit mlp_sequence_embedding in 4.96s.
+- Training/evaluation elapsed: 120.56s.
+- Training seed: 20260620.
+- Benchmark split strategy: site_disjoint.
+- Feature seed: 20260620.
+- Benchmark split strategy: site_disjoint.
+- Consumed auditor split files: data\processed\splits\site_disjoint.csv.
+- Split sizes: {"test": 931, "train": 3257, "val": 465}.
+- Loaded 1880 sequences from data\raw\uniprot_sequences.json.
+- Loaded 0 additional sequences from data\raw\uniprot_ptmint_accessions.fasta.
+- Rows missing full modified-protein sequence: 0/4653.
+- Rows missing full partner-protein sequence: 0/4653.
+- CUDA unavailable; falling back to deterministic sequence features.
+- Wrote row feature matrix: C:\Users\Aadi Nair\switchppi_sprint\data\processed\feature_cache\row_features_site_disjoint_deterministic.npz.
+- Embedding backend=deterministic, base_dim=296, row_dim=1480.
+- Fit majority in 0.00s.
+- Fit logistic_regression_mechanism in 0.21s.
+- Fit tree_baseline_mechanism in 2.19s.
+- Fit sequence_embedding_logistic in 45.36s.
+- Fit combined_mechanism_aware in 7.45s.
+- Fit mlp_sequence_embedding in 2.39s.
+- Training/evaluation elapsed: 66.55s.

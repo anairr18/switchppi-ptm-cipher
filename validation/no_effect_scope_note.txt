@@ -1,0 +1,5 @@
+No-effect evidence policy:
+The headline task remains binary signed regulation: enhance vs inhibit.
+Unknown, untested, missing, or unlabeled PPIs must not be used as no_effect.
+The project should add no_effect only when a source explicitly tested a PTM-site/PPI perturbation and reported no binding or no significant interaction change.
+Until >=100 high-confidence no_effect rows are curated, NCS claims should not describe a three-class switch predictor.

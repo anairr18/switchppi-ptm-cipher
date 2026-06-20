@@ -1,0 +1,17 @@
+NCS desk-rejection audit
+Completed criteria: 8
+Missing criteria: 3
+
+Bottom line:
+The current package is substantially stronger than a benchmark-only PTMint classifier because it includes event-level provenance, multi-axis Shield splits, shortcut baselines, claim gates, temporal scaffolding, and counterfactual ablations.
+External validation now present on 108 PRISMA rows: best ranking model sequence_random_forest AUPRC=0.959, AUROC=0.883; best thresholded model counterfactual_logistic MCC=0.530, balanced_accuracy=0.749.
+Structure mapping: 3646 events have exact chain-to-UniProt support; 645 PTM sites are listed at interfaces; 65 have recorded contacts. Same-residue null enrichment=1.40; actual/null distance ratio=0.76.
+External-method inventory is now present for 5 methods: 4 retrieved locally and 2 marked potentially runnable, but no SOTA method has yet been rerun under the Shield splits.
+DeepPhosPPI public DatasetB lineage audit is complete: 3309 rows overlap the current event table after +1 site correction, with label agreement=0.994.
+It is still not safe for Nature Computational Science submission until SOTA baseline reruns and true interface-similarity shielding are implemented.
+
+Most defensible current target:
+Bioinformatics / Briefings in Bioinformatics / NAR resource-style after external validation is added.
+
+NCS-safe target:
+Only after the remaining priority-1 tasks in ncs_remaining_work_queue.tsv are complete.

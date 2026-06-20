@@ -1,0 +1,2 @@
+resource	downloaded	pdb_files	complex_interaction_rows	complex_interface_rows	unique_complexes_in_interactions	unique_complexes_in_interfaces	has_uniprot_or_event_mapping	mapped_event_rows	site_at_interface_event_rows	usable_for_current_interface_shield	reason_not_used	next_step
+PTMint protein structure information	True	2960	91388	297904	2960	2960	True	3646	645	True		Add interface-similarity clusters with Foldseek/TM-align/contact-Jaccard on the mapped structures; current mapping supports interface localization but not cold-interface similarity shielding.

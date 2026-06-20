@@ -1,0 +1,19 @@
+column	required	description
+modified_uniprot	True	UniProt accession for the modified/tested protein.
+modified_gene	True	Gene symbol for the modified/tested protein.
+partner_uniprot	True	UniProt accession for the interaction partner.
+partner_gene	True	Gene symbol for the interaction partner.
+organism	True	Organism name.
+ptm_type	True	PTM type, e.g. Phos, Ac, Me, Ub.
+residue	True	One-letter residue code.
+position	True	1-based UniProt canonical position.
+effect_label	True	Must be no_effect for this table.
+assay_type	True	Assay that explicitly tested the PTM-site/PPI effect.
+perturbation	True	PTM mimic/blocking mutation, kinase perturbation, peptide modification, or direct modified peptide/protein assay.
+pmid	True	PubMed ID for the no-effect evidence.
+publication_date	True	Publication date, ideally YYYY-MM-DD.
+source	True	Database or manual literature source.
+evidence_sentence	True	Short quoted/paraphrased evidence that the interaction was tested and no effect was observed.
+curator	True	Curator initials or agent ID.
+curation_confidence	True	high, medium, or low.
+notes	True	Isoform, assay caveat, or ambiguity notes.

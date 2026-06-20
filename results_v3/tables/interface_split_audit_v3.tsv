@@ -1,0 +1,2 @@
+split_col	held_out_axis	jaccard_threshold	train_rows	valid_rows	test_rows	train_valid_overlap	train_test_overlap	valid_test_overlap	mapped_events_with_contact_signature	mapped_events_with_contacts	interface_clusters	test_pos_rate
+S2b_cold_interface_split	interface_cluster_id_contact_jaccard	0.25	2677	574	573	0	0	0	3618	3549	2456	0.699825479930192

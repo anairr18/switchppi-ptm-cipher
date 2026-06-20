@@ -1,0 +1,12 @@
+criterion	status	evidence	desk_rejection_risk_if_missing
+event-level evidence schema with provenance	complete	3824 events, 2054 PMIDs, 10 assay families	high
+multi-axis leakage-shielded splits	complete	9 non-random shield splits; forbidden overlaps zero=True	critical
+confounder baselines and negative controls	complete	counterfactual_shuffled_labels, motif_only, source_assay_only, topology_only	critical
+counterfactual/proteoform ablations	complete	counterfactual_mlp mean shield AUPRC delta vs no-PTM-chemistry=0.042	high
+claim-gating against shortcut baselines	complete	21 total passed gates; 10 counterfactual passed gates	high
+temporal/prospective validation scaffold	complete	all benchmark PMIDs dated; validation source candidates define post-2021 cutoff	critical
+real independent post-cutoff validation data ingested	complete	108 post-cutoff rows evaluated; best=sequence_random_forest AUPRC=0.959; exact row overlap=0, PMID overlap=0	critical for NCS
+structure-supported interface localization audit	complete	3646 exact chain-to-UniProt mapped events; 645 PTM sites listed at interfaces; 65 with recorded contacts; residue-matched interface enrichment=1.40; actual/null distance ratio=0.76	high
+current SOTA baselines rerun under Shield	missing	reproducibility inventory complete for 5 methods; 4 retrieved locally; 2 appears runnable without new artifacts; blocked after retrieval: PhosPPI, DeepPhosPPI, PTM-Mamba. No fair Shield rerun metrics yet. DeepPhosPPI public DatasetB audit: 3309 rows overlap this event table after +1 site correction, residue match rate=1.000, label agreement=0.994; use this as a data-lineage warning, not a reproduced baseline.	critical for NCS
+true interface-similarity shielding	missing	3646 exact chain-to-UniProt mapped events; 645 PTM sites listed at interfaces; 65 with recorded contacts; residue-matched interface enrichment=1.40; actual/null distance ratio=0.76; no Foldseek/TM-align/contact-Jaccard/PINDER cold-interface clusters yet	critical for NCS
+experimentally tested no-effect labels	missing	current task is signed enhance vs inhibit among known regulatory events only	medium if claims stay scoped; high for three-class switching

@@ -1,0 +1,453 @@
+{
+  "column_resolution": {
+    "label": {
+      "column": "effect_label",
+      "note": null
+    },
+    "modified_protein": {
+      "column": "modified_uniprot",
+      "note": null
+    },
+    "pmid": {
+      "column": "pmid",
+      "note": null
+    },
+    "protein_a": {
+      "column": "modified_uniprot",
+      "note": null
+    },
+    "protein_b": {
+      "column": "partner_uniprot",
+      "note": null
+    },
+    "site": {
+      "column": "position",
+      "note": null
+    }
+  },
+  "columns": [
+    "modified_uniprot",
+    "modified_gene",
+    "partner_uniprot",
+    "partner_gene",
+    "organism",
+    "ptm_type",
+    "residue",
+    "position",
+    "effect_label",
+    "pmid",
+    "detection_method",
+    "disease",
+    "source"
+  ],
+  "generated_at": "2026-06-20T17:58:02+00:00",
+  "input": "C:\\Users\\Aadi Nair\\switchppi_sprint\\data\\processed\\ptmint_normalized.csv",
+  "row_count": 4653,
+  "seed": 2026,
+  "splits": [
+    {
+      "audit": {
+        "assignment_metadata": {
+          "actual_counts": {
+            "test": 931,
+            "train": 3257,
+            "validation": 465
+          },
+          "label_counts": {
+            "test": {
+              "Enhance": 600,
+              "Induce": 14,
+              "Inhibit": 317
+            },
+            "train": {
+              "Enhance": 2164,
+              "Induce": 56,
+              "Inhibit": 1037
+            },
+            "validation": {
+              "Enhance": 309,
+              "Induce": 5,
+              "Inhibit": 151
+            }
+          },
+          "stratified_by_label": true,
+          "target_counts": {
+            "test": 931,
+            "train": 3257,
+            "validation": 465
+          },
+          "unit_count": 4653
+        },
+        "constraint": null,
+        "degree_only_feature_source": "all_train_rows",
+        "examples": [],
+        "forbidden_entity_overlap_count": null,
+        "generated_at": "2026-06-20T17:58:01+00:00",
+        "label_distribution": {
+          "test": {
+            "Enhance": 600,
+            "Induce": 14,
+            "Inhibit": 317
+          },
+          "train": {
+            "Enhance": 2164,
+            "Induce": 56,
+            "Inhibit": 1037
+          },
+          "validation": {
+            "Enhance": 309,
+            "Induce": 5,
+            "Inhibit": 151
+          }
+        },
+        "partition_counts": {
+          "test": 931,
+          "train": 3257,
+          "validation": 465
+        },
+        "passed": true,
+        "split_name": "random",
+        "train_test_overlap_count": null,
+        "unit_metadata": {
+          "unit_count": 4653
+        }
+      },
+      "constraint": null,
+      "files": {
+        "degree_only_features": "C:\\Users\\Aadi Nair\\switchppi_sprint\\data\\processed\\splits\\random_degree_only_features.csv",
+        "leakage_audit": "C:\\Users\\Aadi Nair\\switchppi_sprint\\data\\processed\\splits\\random_leakage_audit.json",
+        "shuffled_labels": "C:\\Users\\Aadi Nair\\switchppi_sprint\\data\\processed\\splits\\random_shuffled_labels.csv",
+        "split": "C:\\Users\\Aadi Nair\\switchppi_sprint\\data\\processed\\splits\\random.csv"
+      },
+      "name": "random",
+      "reason": null,
+      "status": "created"
+    },
+    {
+      "audit": {
+        "assignment_metadata": {
+          "actual_counts": {
+            "test": 931,
+            "train": 3257,
+            "validation": 465
+          },
+          "label_counts": {
+            "test": {
+              "Enhance": 623,
+              "Induce": 13,
+              "Inhibit": 295
+            },
+            "train": {
+              "Enhance": 2135,
+              "Induce": 59,
+              "Inhibit": 1063
+            },
+            "validation": {
+              "Enhance": 315,
+              "Induce": 3,
+              "Inhibit": 147
+            }
+          },
+          "stratified_by_label": true,
+          "target_counts": {
+            "test": 931,
+            "train": 3257,
+            "validation": 465
+          },
+          "unit_count": 2350
+        },
+        "constraint": "unordered protein pair",
+        "degree_only_feature_source": "all_train_rows",
+        "examples": [],
+        "forbidden_entity_count": 2350,
+        "forbidden_entity_overlap_count": 0,
+        "generated_at": "2026-06-20T17:58:01+00:00",
+        "label_distribution": {
+          "test": {
+            "Enhance": 623,
+            "Induce": 13,
+            "Inhibit": 295
+          },
+          "train": {
+            "Enhance": 2135,
+            "Induce": 59,
+            "Inhibit": 1063
+          },
+          "validation": {
+            "Enhance": 315,
+            "Induce": 3,
+            "Inhibit": 147
+          }
+        },
+        "partition_counts": {
+          "test": 931,
+          "train": 3257,
+          "validation": 465
+        },
+        "passed": true,
+        "split_name": "pair_disjoint",
+        "train_test_overlap_count": 0,
+        "unit_metadata": {
+          "component_count": 2350,
+          "entity_count": 2350,
+          "largest_component_rows": 70,
+          "missing_entity_rows": 0
+        }
+      },
+      "constraint": "unordered protein pair",
+      "files": {
+        "degree_only_features": "C:\\Users\\Aadi Nair\\switchppi_sprint\\data\\processed\\splits\\pair_disjoint_degree_only_features.csv",
+        "leakage_audit": "C:\\Users\\Aadi Nair\\switchppi_sprint\\data\\processed\\splits\\pair_disjoint_leakage_audit.json",
+        "shuffled_labels": "C:\\Users\\Aadi Nair\\switchppi_sprint\\data\\processed\\splits\\pair_disjoint_shuffled_labels.csv",
+        "split": "C:\\Users\\Aadi Nair\\switchppi_sprint\\data\\processed\\splits\\pair_disjoint.csv"
+      },
+      "name": "pair_disjoint",
+      "reason": null,
+      "status": "created"
+    },
+    {
+      "audit": {
+        "assignment_metadata": {
+          "actual_counts": {
+            "test": 931,
+            "train": 3257,
+            "validation": 465
+          },
+          "label_counts": {
+            "test": {
+              "Enhance": 641,
+              "Induce": 4,
+              "Inhibit": 286
+            },
+            "train": {
+              "Enhance": 2126,
+              "Induce": 58,
+              "Inhibit": 1073
+            },
+            "validation": {
+              "Enhance": 306,
+              "Induce": 13,
+              "Inhibit": 146
+            }
+          },
+          "stratified_by_label": true,
+          "target_counts": {
+            "test": 931,
+            "train": 3257,
+            "validation": 465
+          },
+          "unit_count": 1165
+        },
+        "constraint": "modified protein",
+        "degree_only_feature_source": "all_train_rows",
+        "examples": [],
+        "forbidden_entity_count": 1165,
+        "forbidden_entity_overlap_count": 0,
+        "generated_at": "2026-06-20T17:58:01+00:00",
+        "label_distribution": {
+          "test": {
+            "Enhance": 641,
+            "Induce": 4,
+            "Inhibit": 286
+          },
+          "train": {
+            "Enhance": 2126,
+            "Induce": 58,
+            "Inhibit": 1073
+          },
+          "validation": {
+            "Enhance": 306,
+            "Induce": 13,
+            "Inhibit": 146
+          }
+        },
+        "partition_counts": {
+          "test": 931,
+          "train": 3257,
+          "validation": 465
+        },
+        "passed": true,
+        "split_name": "modified_protein_disjoint",
+        "train_test_overlap_count": 0,
+        "unit_metadata": {
+          "component_count": 1165,
+          "entity_count": 1165,
+          "largest_component_rows": 80,
+          "missing_entity_rows": 0
+        }
+      },
+      "constraint": "modified protein",
+      "files": {
+        "degree_only_features": "C:\\Users\\Aadi Nair\\switchppi_sprint\\data\\processed\\splits\\modified_protein_disjoint_degree_only_features.csv",
+        "leakage_audit": "C:\\Users\\Aadi Nair\\switchppi_sprint\\data\\processed\\splits\\modified_protein_disjoint_leakage_audit.json",
+        "shuffled_labels": "C:\\Users\\Aadi Nair\\switchppi_sprint\\data\\processed\\splits\\modified_protein_disjoint_shuffled_labels.csv",
+        "split": "C:\\Users\\Aadi Nair\\switchppi_sprint\\data\\processed\\splits\\modified_protein_disjoint.csv"
+      },
+      "name": "modified_protein_disjoint",
+      "reason": null,
+      "status": "created"
+    },
+    {
+      "audit": {
+        "assignment_metadata": {
+          "actual_counts": {
+            "test": 931,
+            "train": 3257,
+            "validation": 465
+          },
+          "label_counts": {
+            "test": {
+              "Enhance": 634,
+              "Induce": 5,
+              "Inhibit": 292
+            },
+            "train": {
+              "Enhance": 2132,
+              "Induce": 67,
+              "Inhibit": 1058
+            },
+            "validation": {
+              "Enhance": 307,
+              "Induce": 3,
+              "Inhibit": 155
+            }
+          },
+          "stratified_by_label": true,
+          "target_counts": {
+            "test": 931,
+            "train": 3257,
+            "validation": 465
+          },
+          "unit_count": 2456
+        },
+        "constraint": "modified protein + site when available, otherwise site",
+        "degree_only_feature_source": "all_train_rows",
+        "examples": [],
+        "forbidden_entity_count": 2456,
+        "forbidden_entity_overlap_count": 0,
+        "generated_at": "2026-06-20T17:58:01+00:00",
+        "label_distribution": {
+          "test": {
+            "Enhance": 634,
+            "Induce": 5,
+            "Inhibit": 292
+          },
+          "train": {
+            "Enhance": 2132,
+            "Induce": 67,
+            "Inhibit": 1058
+          },
+          "validation": {
+            "Enhance": 307,
+            "Induce": 3,
+            "Inhibit": 155
+          }
+        },
+        "partition_counts": {
+          "test": 931,
+          "train": 3257,
+          "validation": 465
+        },
+        "passed": true,
+        "split_name": "site_disjoint",
+        "train_test_overlap_count": 0,
+        "unit_metadata": {
+          "component_count": 2456,
+          "entity_count": 2456,
+          "largest_component_rows": 37,
+          "missing_entity_rows": 0
+        }
+      },
+      "constraint": "modified protein + site when available, otherwise site",
+      "files": {
+        "degree_only_features": "C:\\Users\\Aadi Nair\\switchppi_sprint\\data\\processed\\splits\\site_disjoint_degree_only_features.csv",
+        "leakage_audit": "C:\\Users\\Aadi Nair\\switchppi_sprint\\data\\processed\\splits\\site_disjoint_leakage_audit.json",
+        "shuffled_labels": "C:\\Users\\Aadi Nair\\switchppi_sprint\\data\\processed\\splits\\site_disjoint_shuffled_labels.csv",
+        "split": "C:\\Users\\Aadi Nair\\switchppi_sprint\\data\\processed\\splits\\site_disjoint.csv"
+      },
+      "name": "site_disjoint",
+      "reason": null,
+      "status": "created"
+    },
+    {
+      "audit": {
+        "assignment_metadata": {
+          "actual_counts": {
+            "test": 931,
+            "train": 3257,
+            "validation": 465
+          },
+          "label_counts": {
+            "test": {
+              "Enhance": 625,
+              "Induce": 15,
+              "Inhibit": 291
+            },
+            "train": {
+              "Enhance": 2139,
+              "Induce": 60,
+              "Inhibit": 1058
+            },
+            "validation": {
+              "Enhance": 309,
+              "Inhibit": 156
+            }
+          },
+          "stratified_by_label": true,
+          "target_counts": {
+            "test": 931,
+            "train": 3257,
+            "validation": 465
+          },
+          "unit_count": 2054
+        },
+        "constraint": "PMID",
+        "degree_only_feature_source": "all_train_rows",
+        "examples": [],
+        "forbidden_entity_count": 2054,
+        "forbidden_entity_overlap_count": 0,
+        "generated_at": "2026-06-20T17:58:01+00:00",
+        "label_distribution": {
+          "test": {
+            "Enhance": 625,
+            "Induce": 15,
+            "Inhibit": 291
+          },
+          "train": {
+            "Enhance": 2139,
+            "Induce": 60,
+            "Inhibit": 1058
+          },
+          "validation": {
+            "Enhance": 309,
+            "Inhibit": 156
+          }
+        },
+        "partition_counts": {
+          "test": 931,
+          "train": 3257,
+          "validation": 465
+        },
+        "passed": true,
+        "split_name": "pmid_disjoint",
+        "train_test_overlap_count": 0,
+        "unit_metadata": {
+          "component_count": 2054,
+          "entity_count": 2054,
+          "largest_component_rows": 82,
+          "missing_entity_rows": 0
+        }
+      },
+      "constraint": "PMID",
+      "files": {
+        "degree_only_features": "C:\\Users\\Aadi Nair\\switchppi_sprint\\data\\processed\\splits\\pmid_disjoint_degree_only_features.csv",
+        "leakage_audit": "C:\\Users\\Aadi Nair\\switchppi_sprint\\data\\processed\\splits\\pmid_disjoint_leakage_audit.json",
+        "shuffled_labels": "C:\\Users\\Aadi Nair\\switchppi_sprint\\data\\processed\\splits\\pmid_disjoint_shuffled_labels.csv",
+        "split": "C:\\Users\\Aadi Nair\\switchppi_sprint\\data\\processed\\splits\\pmid_disjoint.csv"
+      },
+      "name": "pmid_disjoint",
+      "reason": null,
+      "status": "created"
+    }
+  ]
+}

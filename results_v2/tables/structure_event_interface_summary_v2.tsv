@@ -1,0 +1,6 @@
+metric	value	interpretation
+structure_supported_event_rows	3659.0	Current event rows with exact chain-to-UniProt structure support.
+mapped_complexes_used	2599.0	PTMint structure complexes tied to at least one event by exact sequence mapping.
+site_at_interface_events	643.0	Events whose modified site is explicitly listed in the interface residue table.
+site_contact_events	65.0	Events whose modified site has a recorded cross-chain contact in the archive.
+median_distance_to_nearest_interface_site	19.0	Median sequence-position distance from PTM site to nearest listed interface residue among mapped events.

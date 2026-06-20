@@ -1,0 +1,25 @@
+field	required	type	source_or_derivation	notes
+source	yes	string	external source name	Examples: Rrustemi2024_PRISMA, PhosphoSitePlus, BioGRID, IntAct, eFIP, SIGNOR
+source_record_id	no	string	external source record id	Stable source-local id when available
+source_url	no	string	external source URL	Record, file, DOI, or dataset URL
+modified_uniprot	yes	string	current column	PTM-bearing protein accession
+modified_gene	no	string	current column	Gene symbol for display/audit only
+partner_uniprot	yes	string	current column	Interacting partner accession
+partner_gene	no	string	current column	Gene symbol for display/audit only
+organism	no	string	current column	Prefer NCBI taxonomy name or current benchmark organism label
+ptm_type	yes	string	current column	Canonical values: Phos, Ac, Ub, Me, Sumo, Glyco
+residue	yes	string	current column	Single-letter residue at the modified site
+position	yes	integer	current column	One-based residue position in source protein sequence
+effect_label	yes_for_signed	string	current column	Use enhance or inhibit for binary validation; leave blank for support-only records
+source_effect_label	no	string	source-native label	Original effect text before canonicalization
+pmid	yes	string	current column	Required for temporal validation
+publication_date	yes_for_temporal	date	derived from PMID via PubMed ESummary	Use YYYY-MM-DD; NCBI month-only dates use day 01
+detection_method	no	string	current column or source-native method	Assay, curation basis, AP-MS, PRISMA, FeatureTab, etc.
+disease	no	string	current column or source-native disease	For stratified audit only
+evidence_score	no	float	source-native statistic	Log2 fold change, confidence score, q value, or curator score if available
+evidence_direction_basis	yes_for_signed	string	manual/source-derived	Short explanation for label assignment, e.g. phospho peptide greater than WT prey binding
+row_key	yes	string	derived	modified_uniprot|partner_uniprot|ptm_type|residue|position
+site_key	yes	string	current derivation	modified_uniprot|ptm_type|residue|position
+pair_key	yes	string	current derivation	min(modified_uniprot,partner_uniprot)||max(modified_uniprot,partner_uniprot)
+inclusion_tier	yes	string	derived	Tier1_signed_prospective, Tier2_signed_independent, Tier3_support_only, excluded
+adjudication_status	yes	string	derived	included, duplicate_collapsed, conflicting_label, missing_date, benchmark_overlap, ambiguous_label

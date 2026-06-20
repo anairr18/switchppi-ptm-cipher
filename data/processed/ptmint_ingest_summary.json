@@ -1,0 +1,29 @@
+{
+  "generated_at_utc": "2026-06-20T17:54:24.673751+00:00",
+  "invalid_output": "C:\\Users\\Aadi Nair\\switchppi_sprint\\data\\processed\\ptmint_invalid_rows.csv",
+  "invalid_reason_distribution": {
+    "position_out_of_range": 2,
+    "residue_mismatch": 39
+  },
+  "invalid_rows": 41,
+  "normalized_output": "C:\\Users\\Aadi Nair\\switchppi_sprint\\data\\processed\\ptmint_normalized.csv",
+  "normalized_rows": 4653,
+  "ptmint_url": "https://ptmint.sjtu.edu.cn/data/PTM%20experimental%20evidence.csv",
+  "raw_label_distribution": {
+    "Enhance": 3102,
+    "Induce": 75,
+    "Inhibit": 1517
+  },
+  "raw_ptmint_csv": "C:\\Users\\Aadi Nair\\switchppi_sprint\\data\\raw\\ptmint_experimental_evidence.csv",
+  "raw_rows": 4694,
+  "source": "PTMint",
+  "uniprot_accessions_url": "https://rest.uniprot.org/uniprotkb/accessions",
+  "uniprot_fasta": "C:\\Users\\Aadi Nair\\switchppi_sprint\\data\\raw\\uniprot_ptmint_accessions.fasta",
+  "unique_uniprot_accessions_requested": 1880,
+  "unique_uniprot_sequences_loaded": 1880,
+  "valid_label_distribution": {
+    "Enhance": 3073,
+    "Induce": 75,
+    "Inhibit": 1505
+  }
+}

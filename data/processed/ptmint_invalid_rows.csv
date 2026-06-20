@@ -1,0 +1,42 @@
+modified_uniprot,modified_gene,partner_uniprot,partner_gene,organism,ptm_type,residue,position,effect_label,pmid,detection_method,disease,source,invalid_reason,uniprot_residue,uniprot_length
+Q8TD46,CD200R1,O60496,DOK2,Human,Phos,Y,302,Enhance,19786546,Surface plasmon resonance(SPR),Lymphoma,PTMint,residue_mismatch,S,348
+Q96RK0,CIC,O00505,KPNA3,Human,Phos,S,1409,Inhibit,21087211,GFP-Trap immunoprecipitation,"Spinocerebellar ataxia(SCA), Cancers",PTMint,residue_mismatch,R,2517
+Q96RK0,CIC,Q8NG27,PJA1,Human,Phos,S,173,Enhance,30737375,Co-IP,Glioblastoma(GBM),PTMint,residue_mismatch,A,2517
+Q96RK0,CIC,P62258,YWHAE,Human,Phos,S,173,Enhance,21087211,GFP-Trap immunoprecipitation,"Spinocerebellar ataxia(SCA), Cancers",PTMint,residue_mismatch,A,2517
+Q96RK0,CIC,P27348,YWHAQ,Human,Phos,S,173,Enhance,33103082,Structure analysis,Breast cancer,PTMint,residue_mismatch,A,2517
+Q9Y5I7,CLDN16,Q07157,TJP1,Human,Phos,T,303,Inhibit,31488724,Co-IP,Renal cell carcinoma(RCC),PTMint,position_out_of_range,,235
+Q9Y5I7,CLDN16,Q9NQA5,TRPV5,Human,Phos,T,303,Enhance,31488724,"Yeast two-hybrid, Co-IP",Renal cell carcinoma(RCC),PTMint,position_out_of_range,,235
+P68431,H3C1,Q92784,DPF3,Human,Ac,K,14,Enhance,20613843,Structure analysis,,PTMint,residue_mismatch,G,136
+P68431,H3C1,O96028,NSD2,Human,Me,K,36,Enhance,20850016,Peptide pull-down,Breast cancer,PTMint,residue_mismatch,V,136
+P68431,H3C1,Q9UPN9,TRIM33,Human,Ac,K,18,Enhance,21726812,Co-IP,Breast cancer,PTMint,residue_mismatch,R,136
+P62805,H4C1,Q9Y294,ASF1A,Human,Phos,S,47,Enhance,21724829,Co-IP,"Aging, Cancers",PTMint,residue_mismatch,I,103
+P62805,H4C1,Q9NVP2,ASF1B,Human,Phos,S,47,Enhance,21724829,Co-IP,"Aging, Cancers",PTMint,residue_mismatch,I,103
+P62805,H4C1,Q9NVP2,ASF1B,Human,Phos,S,47,Enhance,21724829,Co-IP,"Aging, Cancers",PTMint,residue_mismatch,I,103
+P62805,H4C1,Q9UER7,DAXX,Human,Phos,S,47,Inhibit,21724829,Co-IP,"Aging, Cancers",PTMint,residue_mismatch,I,103
+P62805,H4C1,Q9UER7,DAXX,Human,Phos,S,47,Inhibit,21724829,Co-IP,"Aging, Cancers",PTMint,residue_mismatch,I,103
+P62805,H4C1,Q9UER7,DAXX,Human,Phos,S,47,Inhibit,21724829,Co-IP,"Aging, Cancers",PTMint,residue_mismatch,I,103
+P62805,H4C1,Q9UER7,DAXX,Human,Phos,S,47,Inhibit,21724829,Co-IP,"Aging, Cancers",PTMint,residue_mismatch,I,103
+P62805,H4C1,Q9UER7,DAXX,Human,Phos,S,47,Inhibit,21724829,Co-IP,"Aging, Cancers",PTMint,residue_mismatch,I,103
+P62805,H4C1,Q9UER7,DAXX,Human,Phos,S,47,Inhibit,21724829,Co-IP,"Aging, Cancers",PTMint,residue_mismatch,I,103
+Q8N423,LILRB2,P41240,CSK,Human,Phos,Y,562,Enhance,15474475,Peptide pull-down,Leukemia,PTMint,residue_mismatch,A,597
+Q8N423,LILRB2,P29350,PTPN6,Human,Phos,Y,562,Enhance,15474475,Peptide pull-down,Leukemia,PTMint,residue_mismatch,A,597
+Q52LA3,LIN52,P56945,BCAR1,Human,Phos,S,28,Enhance,21498570,Co-IP,,PTMint,residue_mismatch,W,112
+P01106,MYC,O14965,AURKA,Human,Phos,T,58,Enhance,27213815,Peptide pull-down,Hepatocellular carcinoma(HCC),PTMint,residue_mismatch,P,454
+P01106,MYC,O14965,AURKA,Human,Phos,S,62,Enhance,27213815,Peptide pull-down,Hepatocellular carcinoma(HCC),PTMint,residue_mismatch,E,454
+P01106,MYC,O15169,AXIN1,Human,Phos,S,62,Enhance,19131971,Co-IP,Osteosarcoma,PTMint,residue_mismatch,E,454
+P01106,MYC,Q6P1J9,CDC73,Human,Phos,T,58,Enhance,26687678,Peptide pull-down,Cervical cancer,PTMint,residue_mismatch,P,454
+P01106,MYC,Q6P1J9,CDC73,Human,Phos,S,62,Enhance,26687678,Peptide pull-down,Cervical cancer,PTMint,residue_mismatch,E,454
+P01106,MYC,Q8TCG1,CIP2A,Human,Phos,S,62,Enhance,26235622,Proximity ligation assay(PLA),Hyperproliferative diseases,PTMint,residue_mismatch,E,454
+P01106,MYC,Q6PD62,CTR9,Human,Phos,T,58,Enhance,26687678,Sequence alignment,Cervical cancer,PTMint,residue_mismatch,P,454
+P01106,MYC,Q6PD62,CTR9,Human,Phos,S,62,Enhance,26687678,Sequence alignment,Cervical cancer,PTMint,residue_mismatch,E,454
+P01106,MYC,Q969H0,FBXW7,Human,Phos,T,58,Enhance,15150404,Co-IP,"Osteosarcoma, Cervical cancer",PTMint,residue_mismatch,P,454
+P01106,MYC,Q969H0,FBXW7,Human,Phos,T,58,Enhance,15103331,Co-IP,Cancers,PTMint,residue_mismatch,P,454
+P01106,MYC,Q969H0,FBXW7,Human,Phos,T,58,Enhance,27795300,Co-IP,Breast cancer,PTMint,residue_mismatch,P,454
+P01106,MYC,Q969H0,FBXW7,Human,Phos,S,62,Enhance,15103331,Co-IP,Cancers,PTMint,residue_mismatch,E,454
+P01106,MYC,P61244,MAX,Human,Phos,S,373,Inhibit,25326649,Renilla luciferase protein complementation assay(Rluc-PCA),"Colon cancer, Leukemia",PTMint,residue_mismatch,T,454
+P01106,MYC,P61244,MAX,Human,Phos,S,373,Inhibit,25326649,Renilla luciferase protein complementation assay(Rluc-PCA),"Colon cancer, Leukemia",PTMint,residue_mismatch,T,454
+P01106,MYC,P61244,MAX,Human,Phos,T,400,Inhibit,25326649,Renilla luciferase protein complementation assay(Rluc-PCA),"Colon cancer, Leukemia",PTMint,residue_mismatch,E,454
+P01106,MYC,P61244,MAX,Human,Phos,T,400,Inhibit,25326649,Renilla luciferase protein complementation assay(Rluc-PCA),"Colon cancer, Leukemia",PTMint,residue_mismatch,E,454
+P01106,MYC,Q13526,PIN1,Human,Phos,T,58,Enhance,23318434,Co-IP,Breast cancer,PTMint,residue_mismatch,P,454
+P01106,MYC,Q13526,PIN1,Human,Phos,S,62,Enhance,23318434,Co-IP,Breast cancer,PTMint,residue_mismatch,E,454
+P01106,MYC,P78317,RNF4,Human,Phos,S,62,Enhance,27653698,Co-IP,Epithelial cancers,PTMint,residue_mismatch,E,454

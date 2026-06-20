@@ -1,0 +1,8 @@
+figure	panel	content	source_file
+Fig. 1	A-D	PTM-PPI Shield event schema, evidence provenance, PTM/assay/motif composition	event_table_v2.tsv + figure_v2_event_provenance.png
+Fig. 2	A-E	Leakage graph and S0-S9 split audits; zero forbidden overlap table	shield_split_audit_v2.tsv
+Fig. 3	A-D	Random-to-shield performance collapse and Robust Discovery Score	split_collapse_diagnostics_v2.tsv + robust_discovery_scores_v2.tsv
+Fig. 4	A-D	Counterfactual proteoform ablations and claim-gate matrix	novelty_ablation_summary_v2.tsv + claim_gate_matrix_v2.tsv
+Fig. 5	A-C	Structure-supported interface localization and same-residue null enrichment	structure_event_interface_summary_v2.tsv + structure_interface_enrichment_summary_v2.tsv + figure_v2_structure_interface_enrichment.png
+Fig. 6	A-C	Prospective post-2021 validation on Rrustemi 2024 PRISMA signed PTM-PPI rows	external_validation_metrics_v2.tsv + external_validation_overlap_audit.tsv
+Extended Data	all	Failure taxonomy, calibration risk, small-slice warnings, source/assay shortcut checks, and DeepPhosPPI public dataset lineage audit	failure_taxonomy_v2.tsv + figure_v2_calibration_risk.png + deepphosppi_public_dataset_audit.tsv

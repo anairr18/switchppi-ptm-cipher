@@ -741,6 +741,165 @@ if not full.empty and not no_3di.empty:
     else:
         print("Interpretation guardrail: real 3Di improved AUPRC; verify with repeated seeds before a strong claim.")
 
+# %% [markdown]
+# ## Literature-Level AUROC/AUPRC Comparison
+#
+# This is **not** a same-split reproduction. It answers only:
+# "Is my strict 3Di model numerically above or below reported AUROC/AUPRC
+# values in related papers?"
+#
+# Use this table for sanity checking, not as a final SOTA claim.
+
+# %%
+if "metrics_df" not in globals():
+    metrics_df = pd.read_csv(OUT / "ptm_cipher_3di_ablation_metrics_colab.tsv", sep="\t")
+
+own = metrics_df[(metrics_df["model"] == "ptm_cipher_full_3di") & (metrics_df["split"] == "test")].copy()
+if own.empty:
+    raise RuntimeError("No ptm_cipher_full_3di test row found. Run the ablation cell first.")
+own = own.iloc[0]
+
+reported = pd.DataFrame(
+    [
+        {
+            "reported_method": "DeepPhosPPI-2",
+            "reported_dataset": "Betts independent benchmark",
+            "reported_auroc": 0.820,
+            "reported_auprc": 0.921,
+            "value_type": "exact_table",
+            "source": "Gong et al. 2025 Briefings in Bioinformatics Table 2",
+            "url": "https://academic.oup.com/bib/article/26/5/bbaf462/8248860",
+            "comparison_note": "Phosphorylation-only enhance/inhibit task; not the strict S2b cold-interface split.",
+        },
+        {
+            "reported_method": "AttCNN-PhosPPI",
+            "reported_dataset": "Betts independent benchmark",
+            "reported_auroc": 0.744,
+            "reported_auprc": 0.865,
+            "value_type": "exact_table",
+            "source": "Gong et al. 2025 Briefings in Bioinformatics Table 2",
+            "url": "https://academic.oup.com/bib/article/26/5/bbaf462/8248860",
+            "comparison_note": "DeepPhosPPI component model; not the strict S2b cold-interface split.",
+        },
+        {
+            "reported_method": "Transformer-PhosPPI",
+            "reported_dataset": "Betts independent benchmark",
+            "reported_auroc": 0.748,
+            "reported_auprc": 0.858,
+            "value_type": "exact_table",
+            "source": "Gong et al. 2025 Briefings in Bioinformatics Table 2",
+            "url": "https://academic.oup.com/bib/article/26/5/bbaf462/8248860",
+            "comparison_note": "DeepPhosPPI component model; not the strict S2b cold-interface split.",
+        },
+        {
+            "reported_method": "PTM-Mamba",
+            "reported_dataset": "PTMint PTM effect on PPI task",
+            "reported_auroc": 0.63,
+            "reported_auprc": 0.79,
+            "value_type": "approx_from_figure",
+            "source": "Peng et al. 2025 Nature Methods Figure 2c",
+            "url": "https://www.nature.com/articles/s41592-025-02656-9",
+            "comparison_note": "Approximate from plotted bars; official exact source-data table was not exposed in the paper text.",
+        },
+        {
+            "reported_method": "PTM-SaProt",
+            "reported_dataset": "PTMint PTM effect on PPI task",
+            "reported_auroc": 0.61,
+            "reported_auprc": 0.77,
+            "value_type": "approx_from_figure",
+            "source": "Peng et al. 2025 Nature Methods Figure 2c",
+            "url": "https://www.nature.com/articles/s41592-025-02656-9",
+            "comparison_note": "Approximate structure-aware PLM baseline from plotted bars.",
+        },
+        {
+            "reported_method": "PTM-Transformer",
+            "reported_dataset": "PTMint PTM effect on PPI task",
+            "reported_auroc": 0.61,
+            "reported_auprc": 0.72,
+            "value_type": "approx_from_figure",
+            "source": "Peng et al. 2025 Nature Methods Figure 2c",
+            "url": "https://www.nature.com/articles/s41592-025-02656-9",
+            "comparison_note": "Approximate from plotted bars.",
+        },
+        {
+            "reported_method": "ESM-2-3B",
+            "reported_dataset": "PTMint PTM effect on PPI task",
+            "reported_auroc": 0.57,
+            "reported_auprc": 0.76,
+            "value_type": "approx_from_figure",
+            "source": "Peng et al. 2025 Nature Methods Figure 2c",
+            "url": "https://www.nature.com/articles/s41592-025-02656-9",
+            "comparison_note": "Approximate from plotted bars.",
+        },
+        {
+            "reported_method": "ESM-2-650M",
+            "reported_dataset": "PTMint PTM effect on PPI task",
+            "reported_auroc": 0.50,
+            "reported_auprc": 0.70,
+            "value_type": "approx_from_figure",
+            "source": "Peng et al. 2025 Nature Methods Figure 2c",
+            "url": "https://www.nature.com/articles/s41592-025-02656-9",
+            "comparison_note": "Approximate from plotted bars.",
+        },
+        {
+            "reported_method": "OneHot(+PTM)",
+            "reported_dataset": "PTMint PTM effect on PPI task",
+            "reported_auroc": 0.50,
+            "reported_auprc": 0.69,
+            "value_type": "approx_from_figure",
+            "source": "Peng et al. 2025 Nature Methods Figure 2c",
+            "url": "https://www.nature.com/articles/s41592-025-02656-9",
+            "comparison_note": "Approximate from plotted bars.",
+        },
+    ]
+)
+
+reported["your_model"] = "ptm_cipher_full_3di"
+reported["your_dataset"] = "strict S2b cold-interface test"
+reported["your_auroc"] = float(own["auroc"])
+reported["your_auprc"] = float(own["auprc"])
+reported["delta_auroc_yours_minus_reported"] = reported["your_auroc"] - reported["reported_auroc"]
+reported["delta_auprc_yours_minus_reported"] = reported["your_auprc"] - reported["reported_auprc"]
+reported["beats_reported_auroc"] = reported["delta_auroc_yours_minus_reported"] > 0
+reported["beats_reported_auprc"] = reported["delta_auprc_yours_minus_reported"] > 0
+reported["sota_claim_safe"] = False
+reported["why_not_sota_claim"] = (
+    "Cross-study metric comparison only: different datasets/splits/class priors. "
+    "Use same-split reruns or official predictions before claiming SOTA."
+)
+
+reported = reported.sort_values(["reported_auprc", "reported_auroc"], ascending=False)
+reported.to_csv(OUT / "literature_metric_comparison_colab.tsv", sep="\t", index=False)
+
+display_cols = [
+    "reported_method",
+    "reported_dataset",
+    "reported_auroc",
+    "reported_auprc",
+    "your_auroc",
+    "your_auprc",
+    "delta_auroc_yours_minus_reported",
+    "delta_auprc_yours_minus_reported",
+    "beats_reported_auroc",
+    "beats_reported_auprc",
+    "value_type",
+]
+display(reported[display_cols])
+
+best_reported_auprc = reported["reported_auprc"].max()
+best_reported_auroc = reported["reported_auroc"].max()
+print(f"Your strict S2b full-3Di AUROC: {own['auroc']:.4f}")
+print(f"Your strict S2b full-3Di AUPRC: {own['auprc']:.4f}")
+print(f"Best reported literature AUROC in this table: {best_reported_auroc:.4f}")
+print(f"Best reported literature AUPRC in this table: {best_reported_auprc:.4f}")
+
+if own["auprc"] > best_reported_auprc and own["auroc"] > best_reported_auroc:
+    print("Numerically above the listed literature metrics, but still cross-study. Claim: promising; same-split validation still needed.")
+elif own["auprc"] > best_reported_auprc:
+    print("AUPRC is numerically above the listed literature metrics, but AUROC is not. Be careful with SOTA language.")
+else:
+    print("Not numerically above the strongest listed AUPRC. Better claim: stricter cold-interface evaluation plus real-3Di contribution.")
+
 # %%
 with zipfile.ZipFile("/content/ptm_cipher_3di_colab_outputs.zip", "w", compression=zipfile.ZIP_DEFLATED) as zf:
     for path in OUT.glob("*"):

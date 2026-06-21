@@ -53,6 +53,9 @@ The strict 3Di notebook downloads `ptm_cipher_3di_colab_outputs.zip` containing:
 - `ptm_cipher_3di_ensemble_metrics_colab.tsv`
 - `ptm_cipher_3di_ensemble_predictions_colab.tsv`
 - `ptm_cipher_3di_model_leaderboard_colab.tsv`
+- `same_split_competitor_metrics_colab.tsv`
+- `same_split_competitor_predictions_colab.tsv`
+- `same_split_competitor_audit_colab.tsv`
 - `literature_metric_comparison_colab.tsv`
 - one best-state `.pt` file per ablation
 

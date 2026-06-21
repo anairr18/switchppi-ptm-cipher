@@ -19,7 +19,7 @@
 
 # %%
 !nvidia-smi
-!pip -q install pandas numpy scikit-learn tqdm biopython mini3di
+!pip -q install pandas numpy scikit-learn tqdm biopython mini3di transformers accelerate
 
 # %%
 from google.colab import drive, files
@@ -27,6 +27,7 @@ import json
 import os
 import pickle
 import random
+import subprocess
 import urllib.request
 import zipfile
 from pathlib import Path
@@ -43,10 +44,17 @@ from sklearn.metrics import (
     matthews_corrcoef,
     roc_auc_score,
 )
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.neural_network import MLPClassifier
+from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import LabelEncoder
+from sklearn.preprocessing import StandardScaler
 from tqdm.auto import tqdm
 
 import torch
+from torch import nn
+import torch.nn.functional as F
 from torch.utils.data import DataLoader, Dataset
 
 SEED = 4242
@@ -948,6 +956,397 @@ display(claim_gate_df)
 display(metrics_df.sort_values(["split", "model", "seed"]))
 
 # %% [markdown]
+# ## Same-Split Published-Architecture Reruns
+#
+# This section uses the strict real-3Di cohort and S2b split, but reruns
+# competitor-style models on the same train/valid/test rows.
+#
+# Important labeling:
+#
+# - `deep_phosppi_attcnn_public_code_rerun` patches and imports the public
+#   `CNNAttentionModel` from `YyinGong/DeepPhosPPI`, replacing only a noisy
+#   debug `print(batch_idx)` line.
+# - `deep_phosppi_transformer_style_rerun` is a same-split implementation of
+#   the local/global attention architecture pattern in their public Transformer
+#   code, because the repo does not provide a clean pretrained batch predictor.
+# - These are **same-split reruns**, not author checkpoint inference.
+
+# %%
+RUN_SAME_SPLIT_COMPETITORS = True
+COMPETITOR_SEEDS = SEEDS_TO_RUN
+COMPETITOR_EPOCHS = 8 if FULL_CAPABILITY_MODE else 4
+ESM2_MODEL_NAME = "facebook/esm2_t12_35M_UR50D"
+ESM_CACHE = OUT / "same_split_esm2_token_cache.pkl"
+
+same_split_competitor_audit = []
+same_split_competitor_metrics = []
+same_split_competitor_predictions = []
+
+if RUN_SAME_SPLIT_COMPETITORS:
+    from transformers import AutoTokenizer, EsmModel
+    import importlib.util
+
+    AA = set("ACDEFGHIKLMNPQRSTVWY")
+
+    def clean_aa(seq):
+        return "".join(a if a in AA else "X" for a in str(seq).upper())
+
+    tokenizer = AutoTokenizer.from_pretrained(ESM2_MODEL_NAME)
+    esm_model = EsmModel.from_pretrained(ESM2_MODEL_NAME).to(DEVICE)
+    esm_model.eval()
+
+    def embed_token_sequences(seqs, batch_size=8, max_len=1022):
+        seqs = [clean_aa(s)[:max_len] for s in seqs]
+        unique = sorted(set(seqs))
+        if ESM_CACHE.exists():
+            with ESM_CACHE.open("rb") as fh:
+                cache = pickle.load(fh)
+        else:
+            cache = {}
+        missing = [s for s in unique if s not in cache]
+        for i in tqdm(range(0, len(missing), batch_size), desc="ESM2 token embeddings"):
+            batch = missing[i : i + batch_size]
+            encoded = tokenizer(batch, return_tensors="pt", padding=True, truncation=True, max_length=max_len + 2)
+            encoded = {k: v.to(DEVICE) for k, v in encoded.items()}
+            with torch.no_grad():
+                hidden = esm_model(**encoded).last_hidden_state.detach().cpu().numpy().astype("float32")
+            for j, seq in enumerate(batch):
+                cache[seq] = hidden[j, 1 : 1 + len(seq)].astype("float16")
+            with ESM_CACHE.open("wb") as fh:
+                pickle.dump(cache, fh)
+        with ESM_CACHE.open("wb") as fh:
+            pickle.dump(cache, fh)
+        return cache
+
+    seq_cache = embed_token_sequences(
+        list(strict_manifest["mod_seq_crop"].astype(str)) + list(strict_manifest["partner_seq_crop"].astype(str))
+    )
+    ESM_DIM = int(next(iter(seq_cache.values())).shape[1])
+    print("ESM token dim:", ESM_DIM)
+
+    class SameSplitESMDataset(Dataset):
+        def __init__(self, frame):
+            self.frame = frame.reset_index(drop=True)
+
+        def __len__(self):
+            return len(self.frame)
+
+        def __getitem__(self, idx):
+            row = self.frame.iloc[idx]
+            mod_seq = clean_aa(row.mod_seq_crop)[:1022]
+            partner_seq = clean_aa(row.partner_seq_crop)[:1022]
+            mod = np.asarray(seq_cache[mod_seq], dtype=np.float32)
+            partner = np.asarray(seq_cache[partner_seq], dtype=np.float32)
+            ptm_index = int(max(0, min(int(row.ptm_index_crop_0based), len(mod) - 1)))
+            local_start = max(0, ptm_index - 15)
+            local_end = min(len(mod), ptm_index + 16)
+            local = mod[local_start:local_end]
+            return {
+                "event_id": str(row.event_id),
+                "local": local,
+                "mod": mod,
+                "partner": partner,
+                "label": np.int64(row.label_binary),
+            }
+
+    def collate_esm(batch):
+        local_len = max(item["local"].shape[0] for item in batch)
+        mod_len = max(item["mod"].shape[0] for item in batch)
+        partner_len = max(item["partner"].shape[0] for item in batch)
+        out = {
+            "event_id": [item["event_id"] for item in batch],
+            "local": np.zeros((len(batch), local_len, ESM_DIM), dtype=np.float32),
+            "mod": np.zeros((len(batch), mod_len, ESM_DIM), dtype=np.float32),
+            "partner": np.zeros((len(batch), partner_len, ESM_DIM), dtype=np.float32),
+            "local_len": np.zeros(len(batch), dtype=np.int64),
+            "mod_len": np.zeros(len(batch), dtype=np.int64),
+            "partner_len": np.zeros(len(batch), dtype=np.int64),
+            "label": np.asarray([item["label"] for item in batch], dtype=np.int64),
+        }
+        for i, item in enumerate(batch):
+            out["local"][i, : item["local"].shape[0]] = item["local"]
+            out["mod"][i, : item["mod"].shape[0]] = item["mod"]
+            out["partner"][i, : item["partner"].shape[0]] = item["partner"]
+            out["local_len"][i] = item["local"].shape[0]
+            out["mod_len"][i] = item["mod"].shape[0]
+            out["partner_len"][i] = item["partner"].shape[0]
+        tensor_keys = ["local", "mod", "partner", "local_len", "mod_len", "partner_len", "label"]
+        return {k: (torch.as_tensor(v) if k in tensor_keys else v) for k, v in out.items()}
+
+    def masked_mean(x, lengths):
+        mask = torch.arange(x.shape[1], device=x.device)[None, :] < lengths[:, None].to(x.device)
+        weights = mask.float() / lengths[:, None].float().clamp_min(1).to(x.device)
+        return torch.bmm(weights[:, None, :], x).squeeze(1)
+
+    def load_deepphosppi_attcnn_class():
+        repo = Path("/content/DeepPhosPPI")
+        if not repo.exists():
+            subprocess.run(["git", "clone", "--depth", "1", "https://github.com/YyinGong/DeepPhosPPI.git", str(repo)], check=False)
+        src = repo / "DeepPhosPPI" / "TASK2" / "TASK2_CNN_model.py"
+        if not src.exists():
+            same_split_competitor_audit.append(
+                {
+                    "method": "DeepPhosPPI-AttCNN",
+                    "status": "fallback_used",
+                    "note": "Could not find TASK2_CNN_model.py after clone.",
+                }
+            )
+            return None
+        patched = src.read_text(encoding="utf-8", errors="ignore").replace(
+            "        print(batch_idx)\n", "        # Removed noisy upstream debug print for batch rerun.\n"
+        )
+        patched_path = OUT / "patched_TASK2_CNN_model.py"
+        patched_path.write_text(patched, encoding="utf-8")
+        spec = importlib.util.spec_from_file_location("patched_TASK2_CNN_model", patched_path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        same_split_competitor_audit.append(
+            {
+                "method": "DeepPhosPPI-AttCNN",
+                "status": "public_code_imported",
+                "note": "Imported CNNAttentionModel from YyinGong/DeepPhosPPI with only noisy debug print removed.",
+            }
+        )
+        return module.CNNAttentionModel
+
+    PublishedCNNAttentionModel = load_deepphosppi_attcnn_class()
+
+    class FallbackAttCNN(nn.Module):
+        def __init__(self, local_dim, hid_dim, n_layers, kernel_size, dropout, device):
+            super().__init__()
+            self.local_conv = nn.Conv1d(local_dim, hid_dim, kernel_size, padding=(kernel_size - 1) // 2)
+            self.global_conv_A = nn.Conv1d(local_dim, hid_dim, kernel_size, padding=(kernel_size - 1) // 2)
+            self.global_conv_B = nn.Conv1d(local_dim, hid_dim, kernel_size, padding=(kernel_size - 1) // 2)
+            self.local_ln = nn.LayerNorm(hid_dim)
+            self.global_ln_A = nn.LayerNorm(hid_dim)
+            self.global_ln_B = nn.LayerNorm(hid_dim)
+            self.do = nn.Dropout(dropout)
+            self.attention_fc = nn.Linear(hid_dim * 3, 1)
+            self.fc_1 = nn.Linear(hid_dim, 256)
+            self.fc_2 = nn.Linear(256, 64)
+            self.fc_3 = nn.Linear(64, 2)
+            self.gn = nn.GroupNorm(8, 256)
+
+        def forward(self, local_features_A, all_seq_features_A, all_seq_features_B, batch_idx=None):
+            local = self.local_ln(self.local_conv(local_features_A.permute(0, 2, 1)).permute(0, 2, 1))
+            glob_a = self.global_ln_A(self.global_conv_A(all_seq_features_A.permute(0, 2, 1)).permute(0, 2, 1))
+            glob_b = self.global_ln_B(self.global_conv_B(all_seq_features_B.permute(0, 2, 1)).permute(0, 2, 1))
+            sum_local = local.sum(dim=1)
+            sum_a = glob_a.sum(dim=1)
+            sum_b = glob_b.sum(dim=1)
+            gate = torch.sigmoid(self.attention_fc(torch.cat([sum_local, sum_a, sum_b], dim=-1)))
+            combined = sum_local * gate + sum_a * gate + sum_b * (1 - gate)
+            x = F.gelu(self.fc_1(combined))
+            x = self.gn(x)
+            x = F.gelu(self.fc_2(x))
+            return self.fc_3(x)
+
+    class DeepPhosPPITransformerStyle(nn.Module):
+        def __init__(self, input_dim, hid_dim=256, heads=4, layers=2, dropout=0.15):
+            super().__init__()
+            self.proj = nn.Linear(input_dim, hid_dim)
+            enc_layer = nn.TransformerEncoderLayer(
+                d_model=hid_dim,
+                nhead=heads,
+                dim_feedforward=hid_dim * 2,
+                dropout=dropout,
+                activation="gelu",
+                batch_first=True,
+                norm_first=True,
+            )
+            self.mod_encoder = nn.TransformerEncoder(enc_layer, num_layers=layers)
+            self.partner_encoder = nn.TransformerEncoder(enc_layer, num_layers=layers)
+            self.local_cross = nn.MultiheadAttention(hid_dim, heads, dropout=dropout, batch_first=True)
+            self.fc = nn.Sequential(nn.Linear(hid_dim * 3, 256), nn.GELU(), nn.Dropout(dropout), nn.Linear(256, 2))
+
+        def forward(self, local, mod, partner, local_len, mod_len, partner_len):
+            local_h = self.proj(local)
+            mod_h = self.mod_encoder(self.proj(mod))
+            partner_h = self.partner_encoder(self.proj(partner))
+            mod_pool = masked_mean(mod_h, mod_len)
+            partner_pool = masked_mean(partner_h, partner_len)
+            key_mask = torch.arange(mod_h.shape[1], device=mod_h.device)[None, :] >= mod_len[:, None].to(mod_h.device)
+            local_ctx, _ = self.local_cross(local_h, mod_h, mod_h, key_padding_mask=key_mask, need_weights=False)
+            local_pool = masked_mean(local_ctx, local_len)
+            return self.fc(torch.cat([local_pool, mod_pool, partner_pool], dim=-1))
+
+    class AttCNNWrapper(nn.Module):
+        def __init__(self):
+            super().__init__()
+            cls = PublishedCNNAttentionModel or FallbackAttCNN
+            self.model = cls(ESM_DIM, 256, 3, 7, 0.15, DEVICE)
+
+        def forward(self, batch):
+            return self.model(batch["local"], batch["mod"], batch["partner"])
+
+    class TransformerWrapper(nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.model = DeepPhosPPITransformerStyle(ESM_DIM)
+
+        def forward(self, batch):
+            return self.model(batch["local"], batch["mod"], batch["partner"], batch["local_len"], batch["mod_len"], batch["partner_len"])
+
+    def move_esm_batch(batch):
+        out = {}
+        for k, v in batch.items():
+            out[k] = v.to(DEVICE) if torch.is_tensor(v) else v
+        return out
+
+    def train_same_split_torch(model_name, model_factory, seed):
+        reset_run_seed(seed)
+        generator = torch.Generator().manual_seed(seed)
+        train_loader = DataLoader(
+            SameSplitESMDataset(train_df),
+            batch_size=16,
+            shuffle=True,
+            generator=generator,
+            collate_fn=collate_esm,
+            num_workers=0,
+        )
+        valid_loader = DataLoader(SameSplitESMDataset(valid_df), batch_size=24, shuffle=False, collate_fn=collate_esm, num_workers=0)
+        test_loader = DataLoader(SameSplitESMDataset(test_df), batch_size=24, shuffle=False, collate_fn=collate_esm, num_workers=0)
+        model = model_factory().to(DEVICE)
+        opt = torch.optim.AdamW(model.parameters(), lr=3e-4, weight_decay=1e-4)
+        scaler = torch.cuda.amp.GradScaler(enabled=USE_AMP)
+        best_state = None
+        best_valid = -1
+        for epoch in range(1, COMPETITOR_EPOCHS + 1):
+            model.train()
+            for batch in tqdm(train_loader, desc=f"{model_name} seed {seed} epoch {epoch}", leave=False):
+                batch = move_esm_batch(batch)
+                with torch.cuda.amp.autocast(enabled=USE_AMP):
+                    logits = model(batch)
+                    loss = F.cross_entropy(logits, batch["label"])
+                opt.zero_grad(set_to_none=True)
+                scaler.scale(loss).backward()
+                scaler.unscale_(opt)
+                torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+                scaler.step(opt)
+                scaler.update()
+            yv, pv, _ = eval_same_split_torch(model, valid_loader)
+            valid_auprc = average_precision_score(yv, pv)
+            if valid_auprc > best_valid:
+                best_valid = valid_auprc
+                best_state = {k: v.detach().cpu() for k, v in model.state_dict().items()}
+        model.load_state_dict(best_state)
+        rows = []
+        preds = []
+        for split_name, loader, frame in [("valid_best", valid_loader, valid_df), ("test", test_loader, test_df)]:
+            y, p, event_ids = eval_same_split_torch(model, loader)
+            threshold = choose_threshold(y, p)
+            row = metric_row(model_name, split_name, y, p, threshold)
+            row.update({"seed": seed, "rerun_type": "same_split_public_architecture"})
+            rows.append(row)
+            pred = frame[["event_id", "modified_uniprot", "partner_uniprot", "ptm_type", "residue", "position", "effect_label"]].copy()
+            pred["model"] = model_name
+            pred["seed"] = seed
+            pred["split"] = split_name
+            pred["label_binary"] = y.astype(int)
+            pred["pred_score"] = p.astype(float)
+            pred["threshold"] = float(threshold)
+            preds.append(pred)
+        return rows, preds
+
+    def eval_same_split_torch(model, loader):
+        model.eval()
+        ys, ps, event_ids = [], [], []
+        with torch.no_grad():
+            for batch in loader:
+                batch = move_esm_batch(batch)
+                logits = model(batch)
+                ys.extend(batch["label"].detach().cpu().numpy().tolist())
+                ps.extend(logits.softmax(dim=-1)[:, 1].detach().cpu().numpy().tolist())
+                event_ids.extend(batch["event_id"])
+        return np.asarray(ys), np.asarray(ps), event_ids
+
+    def pooled_feature_matrix(frame):
+        local_vecs, mod_vecs, partner_vecs = [], [], []
+        for row in frame.itertuples():
+            mod = np.asarray(seq_cache[clean_aa(row.mod_seq_crop)[:1022]], dtype=np.float32)
+            partner = np.asarray(seq_cache[clean_aa(row.partner_seq_crop)[:1022]], dtype=np.float32)
+            ptm_index = int(max(0, min(int(row.ptm_index_crop_0based), len(mod) - 1)))
+            local = mod[max(0, ptm_index - 15) : min(len(mod), ptm_index + 16)]
+            local_vecs.append(local.mean(axis=0))
+            mod_vecs.append(mod.mean(axis=0))
+            partner_vecs.append(partner.mean(axis=0))
+        return np.hstack([np.vstack(local_vecs), np.vstack(mod_vecs), np.vstack(partner_vecs)]).astype("float32")
+
+    X_train = pooled_feature_matrix(train_df)
+    X_valid = pooled_feature_matrix(valid_df)
+    X_test = pooled_feature_matrix(test_df)
+    y_train = train_df["label_binary"].to_numpy(int)
+    y_valid = valid_df["label_binary"].to_numpy(int)
+    y_test = test_df["label_binary"].to_numpy(int)
+
+    for seed in COMPETITOR_SEEDS:
+        for model_name, factory in [
+            ("deep_phosppi_attcnn_public_code_rerun", AttCNNWrapper),
+            ("deep_phosppi_transformer_style_rerun", TransformerWrapper),
+        ]:
+            rows, preds = train_same_split_torch(model_name, factory, seed)
+            same_split_competitor_metrics.extend(rows)
+            same_split_competitor_predictions.extend(preds)
+            pd.DataFrame(same_split_competitor_metrics).to_csv(OUT / "same_split_competitor_metrics_colab.tsv", sep="\t", index=False)
+            pd.concat(same_split_competitor_predictions, ignore_index=True).to_csv(
+                OUT / "same_split_competitor_predictions_colab.tsv", sep="\t", index=False
+            )
+
+        sklearn_models = {
+            "esm2_same_split_logistic": make_pipeline(
+                StandardScaler(),
+                LogisticRegression(max_iter=3000, class_weight="balanced", solver="liblinear", random_state=seed),
+            ),
+            "esm2_same_split_mlp": make_pipeline(
+                StandardScaler(),
+                MLPClassifier(hidden_layer_sizes=(256, 64), alpha=1e-3, early_stopping=True, max_iter=160, random_state=seed),
+            ),
+            "esm2_same_split_random_forest": RandomForestClassifier(
+                n_estimators=350, min_samples_leaf=2, class_weight="balanced_subsample", n_jobs=-1, random_state=seed
+            ),
+        }
+        for model_name, clf in sklearn_models.items():
+            clf.fit(X_train, y_train)
+            p_valid = clf.predict_proba(X_valid)[:, 1]
+            p_test = clf.predict_proba(X_test)[:, 1]
+            threshold = choose_threshold(y_valid, p_valid)
+            for split_name, frame, y_split, p_split in [
+                ("valid_best", valid_df, y_valid, p_valid),
+                ("test", test_df, y_test, p_test),
+            ]:
+                row = metric_row(model_name, split_name, y_split, p_split, threshold)
+                row.update({"seed": seed, "rerun_type": "same_split_esm2_baseline"})
+                same_split_competitor_metrics.append(row)
+                pred = frame[["event_id", "modified_uniprot", "partner_uniprot", "ptm_type", "residue", "position", "effect_label"]].copy()
+                pred["model"] = model_name
+                pred["seed"] = seed
+                pred["split"] = split_name
+                pred["label_binary"] = y_split.astype(int)
+                pred["pred_score"] = p_split.astype(float)
+                pred["threshold"] = float(threshold)
+                same_split_competitor_predictions.append(pred)
+        pd.DataFrame(same_split_competitor_metrics).to_csv(OUT / "same_split_competitor_metrics_colab.tsv", sep="\t", index=False)
+        pd.concat(same_split_competitor_predictions, ignore_index=True).to_csv(
+            OUT / "same_split_competitor_predictions_colab.tsv", sep="\t", index=False
+        )
+
+    same_split_competitor_metrics_df = pd.DataFrame(same_split_competitor_metrics)
+    same_split_competitor_predictions_df = pd.concat(same_split_competitor_predictions, ignore_index=True)
+    same_split_competitor_audit.append(
+        {
+            "method": "DeepPhosPPI/PTM-Mamba official checkpoints",
+            "status": "not_used",
+            "note": "This section reruns public architectures/features on the strict split; it does not claim author-checkpoint inference.",
+        }
+    )
+    same_split_competitor_audit_df = pd.DataFrame(same_split_competitor_audit)
+    same_split_competitor_metrics_df.to_csv(OUT / "same_split_competitor_metrics_colab.tsv", sep="\t", index=False)
+    same_split_competitor_predictions_df.to_csv(OUT / "same_split_competitor_predictions_colab.tsv", sep="\t", index=False)
+    same_split_competitor_audit_df.to_csv(OUT / "same_split_competitor_audit_colab.tsv", sep="\t", index=False)
+    display(same_split_competitor_metrics_df[same_split_competitor_metrics_df["split"].eq("test")].sort_values("auprc", ascending=False))
+    display(same_split_competitor_audit_df)
+
+# %% [markdown]
 # ## Post-Hoc Ensembles To Maximize AUROC/AUPRC
 #
 # These do not retrain the deep encoder. They use saved validation/test prediction
@@ -1063,7 +1462,16 @@ single_best["kind"] = "single_model_repeated_seed_mean"
 single_best = single_best.rename(columns={"auprc_mean": "auprc", "auroc_mean": "auroc", "mcc_mean": "mcc"})
 ensemble_best = ensemble_metrics_df[ensemble_metrics_df["split"].eq("test")][["model", "auprc", "auroc", "mcc"]].copy()
 ensemble_best["kind"] = "posthoc_ensemble_test"
-leaderboard = pd.concat([single_best, ensemble_best], ignore_index=True).sort_values("auprc", ascending=False)
+leaderboard_parts = [single_best, ensemble_best]
+if "same_split_competitor_metrics_df" in globals() and not same_split_competitor_metrics_df.empty:
+    competitor_best = (
+        same_split_competitor_metrics_df[same_split_competitor_metrics_df["split"].eq("test")]
+        .groupby("model", as_index=False)
+        .agg(auprc=("auprc", "mean"), auroc=("auroc", "mean"), mcc=("mcc", "mean"))
+    )
+    competitor_best["kind"] = "same_split_competitor_rerun_mean"
+    leaderboard_parts.append(competitor_best)
+leaderboard = pd.concat(leaderboard_parts, ignore_index=True).sort_values("auprc", ascending=False)
 leaderboard.to_csv(OUT / "ptm_cipher_3di_model_leaderboard_colab.tsv", sep="\t", index=False)
 
 display(ensemble_metrics_df.sort_values(["split", "auprc"], ascending=[True, False]))

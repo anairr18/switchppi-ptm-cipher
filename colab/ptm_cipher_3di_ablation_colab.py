@@ -447,6 +447,17 @@ print("Strict real-3Di assertion passed.")
 
 # %% [markdown]
 # ## Train full model and ablations
+#
+# Full-capability mode exercises the complete PTM-CIPHER design:
+#
+# - residue x real-3Di x PTM-state factored proteoform embeddings
+# - weight-shared unmodified and modified encoders
+# - interface/contact-conditioned cross-attention
+# - PTM-site perturbation injection and dense contact propagation
+# - modified-minus-unmodified counterfactual delta head
+# - evidential confidence head
+# - gradient-reversal shortcut adversaries
+# - all architecture ablations across repeated seeds
 
 # %%
 for col in ["assay_family", "topology_pair_community"]:
@@ -459,8 +470,22 @@ ptm_to_id = {name: i for i, name in enumerate(PTM_STATES)}
 MAX_MOD = int(strict_manifest["mod_seq_crop"].map(len).max())
 MAX_PARTNER = int(strict_manifest["partner_seq_crop"].map(len).max())
 
-BATCH_SIZE = 8
-EPOCHS = 8
+# Serious/default setting for claim evidence. On T4 this may take a while; A100/L4 is much nicer.
+FULL_CAPABILITY_MODE = True
+SEEDS_TO_RUN = [4242, 1337, 2025, 9001, 7777] if FULL_CAPABILITY_MODE else [4242]
+BATCH_SIZE = 4 if FULL_CAPABILITY_MODE else 8
+EPOCHS_PER_SEED = 12 if FULL_CAPABILITY_MODE else 8
+BOOTSTRAPS = 2000 if FULL_CAPABILITY_MODE else 500
+MODEL_PRESET = {
+    "preset": "full_capability" if FULL_CAPABILITY_MODE else "debug",
+    "dim": 192 if FULL_CAPABILITY_MODE else 128,
+    "heads": 6 if FULL_CAPABILITY_MODE else 4,
+    "layers": 4 if FULL_CAPABILITY_MODE else 2,
+    "ff_dim": 512 if FULL_CAPABILITY_MODE else 384,
+    "dropout": 0.15 if FULL_CAPABILITY_MODE else 0.20,
+    "graph_layers": 3 if FULL_CAPABILITY_MODE else 2,
+}
+USE_AMP = bool(torch.cuda.is_available())
 ABLATIONS_TO_RUN = [
     "ptm_cipher_full_3di",
     "no_3di",
@@ -471,6 +496,8 @@ ABLATIONS_TO_RUN = [
 ]
 
 print("max lengths:", MAX_MOD, MAX_PARTNER)
+print("model preset:", MODEL_PRESET)
+print("seeds:", SEEDS_TO_RUN)
 print("ablations:", ABLATIONS_TO_RUN)
 
 # %%
@@ -615,13 +642,37 @@ def evaluate(model, loader):
             ps.extend(out["logits"].softmax(dim=-1)[:, 1].detach().cpu().numpy().tolist())
     return np.asarray(ys), np.asarray(ps), float(np.mean(losses))
 
-def train_one(ablation):
+def reset_run_seed(seed):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+
+def prediction_frame(frame, ablation, seed, split, y, p, threshold):
+    out = frame[["event_id", "modified_uniprot", "partner_uniprot", "ptm_type", "residue", "position", "effect_label"]].copy()
+    out["model"] = ablation
+    out["seed"] = seed
+    out["split"] = split
+    out["label_binary"] = y.astype(int)
+    out["pred_score"] = p.astype(float)
+    out["threshold"] = float(threshold)
+    out["pred_label"] = (p >= threshold).astype(int)
+    return out
+
+def train_one(ablation, seed):
+    reset_run_seed(seed)
+    train_generator = torch.Generator()
+    train_generator.manual_seed(seed)
     train_loader = DataLoader(
         Strict3DiCipherDataset(train_df, ablation),
         batch_size=BATCH_SIZE,
         shuffle=True,
         collate_fn=collate,
         num_workers=0,
+        generator=train_generator,
     )
     valid_loader = DataLoader(
         Strict3DiCipherDataset(valid_df, ablation),
@@ -639,12 +690,12 @@ def train_one(ablation):
     )
 
     config = PTMCipherConfig(
-        dim=128,
-        heads=4,
-        layers=2,
-        ff_dim=384,
-        dropout=0.20,
-        graph_layers=2,
+        dim=MODEL_PRESET["dim"],
+        heads=MODEL_PRESET["heads"],
+        layers=MODEL_PRESET["layers"],
+        ff_dim=MODEL_PRESET["ff_dim"],
+        dropout=MODEL_PRESET["dropout"],
+        graph_layers=MODEL_PRESET["graph_layers"],
         classes=2,
         head_input="modified" if ablation == "no_delta_head" else "delta",
         adversary_dims={
@@ -654,51 +705,63 @@ def train_one(ablation):
     )
     model = PTMCipher(config).to(DEVICE)
     opt = torch.optim.AdamW(model.parameters(), lr=2e-4, weight_decay=1e-4)
+    scaler = torch.cuda.amp.GradScaler(enabled=USE_AMP)
     lambda_adversary = 0.0 if ablation == "no_adversary" else 0.05
 
     best_score = -1
     best_state = None
     history = []
-    for epoch in range(1, EPOCHS + 1):
+    for epoch in range(1, EPOCHS_PER_SEED + 1):
         model.train()
         train_losses = []
-        for batch in tqdm(train_loader, desc=f"{ablation} epoch {epoch}", leave=False):
+        for batch in tqdm(train_loader, desc=f"{ablation} seed {seed} epoch {epoch}", leave=False):
             batch = move(batch)
-            out = model(
-                batch["mod_residue_ids"],
-                batch["mod_structure_ids"],
-                batch["mod_ptm_state_ids"],
-                batch["unmod_ptm_state_ids"],
-                batch["mod_mask"],
-                batch["partner_residue_ids"],
-                batch["partner_structure_ids"],
-                batch["partner_mask"],
-                batch["ptm_index"],
-                batch["contact_mask"],
-                batch["residue_adjacency"],
-                adversary_alpha=0.0 if ablation == "no_adversary" else min(1.0, epoch / 3),
-            )
-            loss_dict = ptm_cipher_loss(
-                out,
-                batch["label"],
-                {
-                    "assay_family": batch["assay_family"],
-                    "topology_pair_community": batch["topology_pair_community"],
-                },
-                lambda_brier=0.05,
-                lambda_adversary=lambda_adversary,
-            )
+            with torch.cuda.amp.autocast(enabled=USE_AMP):
+                out = model(
+                    batch["mod_residue_ids"],
+                    batch["mod_structure_ids"],
+                    batch["mod_ptm_state_ids"],
+                    batch["unmod_ptm_state_ids"],
+                    batch["mod_mask"],
+                    batch["partner_residue_ids"],
+                    batch["partner_structure_ids"],
+                    batch["partner_mask"],
+                    batch["ptm_index"],
+                    batch["contact_mask"],
+                    batch["residue_adjacency"],
+                    adversary_alpha=0.0 if ablation == "no_adversary" else min(1.0, epoch / 3),
+                )
+                loss_dict = ptm_cipher_loss(
+                    out,
+                    batch["label"],
+                    {
+                        "assay_family": batch["assay_family"],
+                        "topology_pair_community": batch["topology_pair_community"],
+                    },
+                    lambda_brier=0.05,
+                    lambda_adversary=lambda_adversary,
+                )
             loss = loss_dict["loss"]
-            opt.zero_grad()
-            loss.backward()
+            opt.zero_grad(set_to_none=True)
+            scaler.scale(loss).backward()
+            scaler.unscale_(opt)
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-            opt.step()
+            scaler.step(opt)
+            scaler.update()
             train_losses.append(float(loss.detach().cpu()))
 
         y_valid, p_valid, valid_loss = evaluate(model, valid_loader)
         threshold = choose_threshold(y_valid, p_valid)
         row = metric_row(ablation, "valid", y_valid, p_valid, threshold)
-        row.update({"epoch": epoch, "train_loss": float(np.mean(train_losses)), "valid_loss": valid_loss})
+        row.update(
+            {
+                "seed": seed,
+                "epoch": epoch,
+                "train_loss": float(np.mean(train_losses)),
+                "valid_loss": valid_loss,
+                "model_preset": MODEL_PRESET["preset"],
+            }
+        )
         history.append(row)
         print(row)
 
@@ -714,32 +777,192 @@ def train_one(ablation):
     valid_metrics["loss"] = valid_loss
     test_metrics = metric_row(ablation, "test", y_test, p_test, threshold)
     test_metrics["loss"] = test_loss
-    torch.save(best_state, OUT / f"{ablation}_best_state.pt")
-    return history, [valid_metrics, test_metrics]
+    for row in [valid_metrics, test_metrics]:
+        row["seed"] = seed
+        row["best_valid_auprc"] = float(best_score)
+        row["model_preset"] = MODEL_PRESET["preset"]
+        row.update({f"config_{k}": v for k, v in MODEL_PRESET.items() if k != "preset"})
+    predictions = [
+        prediction_frame(valid_df, ablation, seed, "valid_best", y_valid, p_valid, threshold),
+        prediction_frame(test_df, ablation, seed, "test", y_test, p_test, threshold),
+    ]
+    torch.save(best_state, OUT / f"{ablation}_seed{seed}_best_state.pt")
+    return history, [valid_metrics, test_metrics], predictions
 
 # %%
 all_history = []
 all_metrics = []
-for ablation in ABLATIONS_TO_RUN:
-    history, metrics = train_one(ablation)
-    all_history.extend(history)
-    all_metrics.extend(metrics)
-    pd.DataFrame(all_history).to_csv(OUT / "ptm_cipher_3di_ablation_history_colab.tsv", sep="\t", index=False)
-    pd.DataFrame(all_metrics).to_csv(OUT / "ptm_cipher_3di_ablation_metrics_colab.tsv", sep="\t", index=False)
+all_predictions = []
+for seed in SEEDS_TO_RUN:
+    for ablation in ABLATIONS_TO_RUN:
+        history, metrics, predictions = train_one(ablation, seed)
+        all_history.extend(history)
+        all_metrics.extend(metrics)
+        all_predictions.extend(predictions)
+        pd.DataFrame(all_history).to_csv(OUT / "ptm_cipher_3di_ablation_history_colab.tsv", sep="\t", index=False)
+        pd.DataFrame(all_metrics).to_csv(OUT / "ptm_cipher_3di_ablation_metrics_colab.tsv", sep="\t", index=False)
+        pd.concat(all_predictions, ignore_index=True).to_csv(
+            OUT / "ptm_cipher_3di_ablation_predictions_colab.tsv", sep="\t", index=False
+        )
 
 metrics_df = pd.DataFrame(all_metrics)
-display(metrics_df.sort_values(["split", "auprc"], ascending=[True, False]))
+predictions_df = pd.concat(all_predictions, ignore_index=True)
+metrics_df.to_csv(OUT / "ptm_cipher_3di_ablation_metrics_colab.tsv", sep="\t", index=False)
+predictions_df.to_csv(OUT / "ptm_cipher_3di_ablation_predictions_colab.tsv", sep="\t", index=False)
+
+test_metrics = metrics_df[metrics_df["split"] == "test"].copy()
+summary_df = (
+    test_metrics.groupby("model", as_index=False)
+    .agg(
+        seeds=("seed", "nunique"),
+        n=("n", "mean"),
+        auprc_mean=("auprc", "mean"),
+        auprc_sd=("auprc", "std"),
+        auprc_min=("auprc", "min"),
+        auprc_max=("auprc", "max"),
+        auroc_mean=("auroc", "mean"),
+        auroc_sd=("auroc", "std"),
+        mcc_mean=("mcc", "mean"),
+        mcc_sd=("mcc", "std"),
+        balanced_accuracy_mean=("balanced_accuracy", "mean"),
+        macro_f1_mean=("macro_f1", "mean"),
+    )
+    .sort_values("auprc_mean", ascending=False)
+)
+summary_df.to_csv(OUT / "ptm_cipher_3di_repeated_seed_summary_colab.tsv", sep="\t", index=False)
+
+delta_rows = []
+metric_cols = ["auprc", "auroc", "mcc", "balanced_accuracy", "macro_f1"]
+for ablation in [m for m in ABLATIONS_TO_RUN if m != "ptm_cipher_full_3di"]:
+    merged = test_metrics[test_metrics["model"].eq("ptm_cipher_full_3di")][["seed"] + metric_cols].merge(
+        test_metrics[test_metrics["model"].eq(ablation)][["seed"] + metric_cols],
+        on="seed",
+        suffixes=("_full", "_ablation"),
+    )
+    for metric in metric_cols:
+        values = merged[f"{metric}_full"] - merged[f"{metric}_ablation"]
+        delta_rows.append(
+            {
+                "comparison": f"ptm_cipher_full_3di_minus_{ablation}",
+                "metric": metric,
+                "paired_seeds": int(len(values)),
+                "mean_delta": float(values.mean()) if len(values) else np.nan,
+                "sd_delta": float(values.std(ddof=1)) if len(values) > 1 else np.nan,
+                "min_delta": float(values.min()) if len(values) else np.nan,
+                "max_delta": float(values.max()) if len(values) else np.nan,
+                "fraction_positive": float((values > 0).mean()) if len(values) else np.nan,
+            }
+        )
+
+seed_delta_df = pd.DataFrame(delta_rows)
+seed_delta_df.to_csv(OUT / "ptm_cipher_3di_seed_delta_summary_colab.tsv", sep="\t", index=False)
+
+def paired_bootstrap_delta(y, p_full, p_base, metric="auprc", bootstraps=BOOTSTRAPS, seed=123):
+    rng = np.random.default_rng(seed)
+    y = np.asarray(y)
+    p_full = np.asarray(p_full)
+    p_base = np.asarray(p_base)
+    n = len(y)
+    observed = (
+        average_precision_score(y, p_full) - average_precision_score(y, p_base)
+        if metric == "auprc"
+        else roc_auc_score(y, p_full) - roc_auc_score(y, p_base)
+    )
+    deltas = []
+    for _ in range(bootstraps):
+        idx = rng.integers(0, n, size=n)
+        if len(np.unique(y[idx])) < 2:
+            continue
+        if metric == "auprc":
+            deltas.append(average_precision_score(y[idx], p_full[idx]) - average_precision_score(y[idx], p_base[idx]))
+        else:
+            deltas.append(roc_auc_score(y[idx], p_full[idx]) - roc_auc_score(y[idx], p_base[idx]))
+    deltas = np.asarray(deltas)
+    return {
+        "observed_delta": float(observed),
+        "bootstrap_mean_delta": float(np.mean(deltas)),
+        "ci95_low": float(np.quantile(deltas, 0.025)),
+        "ci95_high": float(np.quantile(deltas, 0.975)),
+        "p_delta_le_0": float(np.mean(deltas <= 0)),
+        "bootstraps_used": int(len(deltas)),
+    }
+
+bootstrap_rows = []
+test_pred = predictions_df[predictions_df["split"].eq("test")].copy()
+for seed in SEEDS_TO_RUN:
+    full_pred = test_pred[(test_pred["model"].eq("ptm_cipher_full_3di")) & (test_pred["seed"].eq(seed))]
+    for ablation in [m for m in ABLATIONS_TO_RUN if m != "ptm_cipher_full_3di"]:
+        base_pred = test_pred[(test_pred["model"].eq(ablation)) & (test_pred["seed"].eq(seed))]
+        merged = full_pred[["event_id", "label_binary", "pred_score"]].merge(
+            base_pred[["event_id", "pred_score"]],
+            on="event_id",
+            suffixes=("_full", "_ablation"),
+        )
+        if merged.empty:
+            continue
+        for metric in ["auprc", "auroc"]:
+            row = paired_bootstrap_delta(
+                merged["label_binary"].to_numpy(),
+                merged["pred_score_full"].to_numpy(),
+                merged["pred_score_ablation"].to_numpy(),
+                metric=metric,
+                seed=seed,
+            )
+            row.update({"seed": seed, "comparison": f"ptm_cipher_full_3di_minus_{ablation}", "metric": metric})
+            bootstrap_rows.append(row)
+
+bootstrap_df = pd.DataFrame(bootstrap_rows)
+bootstrap_df.to_csv(OUT / "ptm_cipher_3di_paired_bootstrap_deltas_colab.tsv", sep="\t", index=False)
+
+claim_gate = {
+    "full_capability_mode": FULL_CAPABILITY_MODE,
+    "seeds": ",".join(str(s) for s in SEEDS_TO_RUN),
+    "ablation_count": len(ABLATIONS_TO_RUN),
+    "model_preset": MODEL_PRESET["preset"],
+    "full_3di_mean_auprc": float(summary_df.loc[summary_df["model"].eq("ptm_cipher_full_3di"), "auprc_mean"].iloc[0]),
+    "full_3di_mean_auroc": float(summary_df.loc[summary_df["model"].eq("ptm_cipher_full_3di"), "auroc_mean"].iloc[0]),
+}
+no3di_delta = seed_delta_df[
+    seed_delta_df["comparison"].eq("ptm_cipher_full_3di_minus_no_3di") & seed_delta_df["metric"].eq("auprc")
+]
+claim_gate["mean_auprc_delta_full_minus_no3di"] = float(no3di_delta["mean_delta"].iloc[0]) if not no3di_delta.empty else np.nan
+claim_gate["fraction_positive_auprc_delta_full_minus_no3di"] = (
+    float(no3di_delta["fraction_positive"].iloc[0]) if not no3di_delta.empty else np.nan
+)
+claim_gate["strong_architecture_claim_ready"] = bool(
+    claim_gate["mean_auprc_delta_full_minus_no3di"] > 0
+    and claim_gate["fraction_positive_auprc_delta_full_minus_no3di"] >= 0.8
+)
+claim_gate["claim_language"] = (
+    "Full PTM-CIPHER with real 3Di improves over no-3Di across repeated seeds under strict S2b."
+    if claim_gate["strong_architecture_claim_ready"]
+    else "Use cautious language: real 3Di signal is not yet stable enough across repeated seeds."
+)
+claim_gate_df = pd.DataFrame([claim_gate])
+claim_gate_df.to_csv(OUT / "ptm_cipher_3di_claim_gate_colab.tsv", sep="\t", index=False)
+
+display(summary_df)
+display(seed_delta_df)
+display(bootstrap_df.head(30))
+display(claim_gate_df)
+display(metrics_df.sort_values(["split", "model", "seed"]))
 
 # %%
-full = metrics_df[(metrics_df["model"] == "ptm_cipher_full_3di") & (metrics_df["split"] == "test")]
-no_3di = metrics_df[(metrics_df["model"] == "no_3di") & (metrics_df["split"] == "test")]
-if not full.empty and not no_3di.empty:
-    delta = float(full.iloc[0]["auprc"] - no_3di.iloc[0]["auprc"])
-    print(f"Test AUPRC delta, full real-3Di minus no_3di: {delta:.4f}")
-    if delta <= 0:
-        print("Interpretation guardrail: real 3Di did not improve AUPRC in this run. Do not claim architecture superiority.")
+full_summary = summary_df[summary_df["model"].eq("ptm_cipher_full_3di")]
+no_3di_summary = summary_df[summary_df["model"].eq("no_3di")]
+full_vs_no3di_auprc = seed_delta_df[
+    seed_delta_df["comparison"].eq("ptm_cipher_full_3di_minus_no_3di") & seed_delta_df["metric"].eq("auprc")
+]
+if not full_summary.empty and not no_3di_summary.empty and not full_vs_no3di_auprc.empty:
+    row = full_vs_no3di_auprc.iloc[0]
+    print(f"Repeated-seed mean test AUPRC, full real-3Di: {full_summary.iloc[0]['auprc_mean']:.4f}")
+    print(f"Repeated-seed mean test AUPRC, no_3di: {no_3di_summary.iloc[0]['auprc_mean']:.4f}")
+    print(f"Repeated-seed mean AUPRC delta, full real-3Di minus no_3di: {row['mean_delta']:.4f}")
+    print(f"Fraction of seeds with positive AUPRC delta: {row['fraction_positive']:.2f}")
+    if row["mean_delta"] <= 0 or row["fraction_positive"] < 0.8:
+        print("Interpretation guardrail: real 3Di is not stable enough across seeds for a strong architecture claim.")
     else:
-        print("Interpretation guardrail: real 3Di improved AUPRC; verify with repeated seeds before a strong claim.")
+        print("Interpretation guardrail: real 3Di improves across repeated seeds; paired bootstrap and external validation still matter.")
 
 # %% [markdown]
 # ## Literature-Level AUROC/AUPRC Comparison
@@ -753,10 +976,12 @@ if not full.empty and not no_3di.empty:
 # %%
 if "metrics_df" not in globals():
     metrics_df = pd.read_csv(OUT / "ptm_cipher_3di_ablation_metrics_colab.tsv", sep="\t")
+if "summary_df" not in globals():
+    summary_df = pd.read_csv(OUT / "ptm_cipher_3di_repeated_seed_summary_colab.tsv", sep="\t")
 
-own = metrics_df[(metrics_df["model"] == "ptm_cipher_full_3di") & (metrics_df["split"] == "test")].copy()
+own = summary_df[summary_df["model"].eq("ptm_cipher_full_3di")].copy()
 if own.empty:
-    raise RuntimeError("No ptm_cipher_full_3di test row found. Run the ablation cell first.")
+    raise RuntimeError("No ptm_cipher_full_3di repeated-seed summary row found. Run the full ablation cell first.")
 own = own.iloc[0]
 
 reported = pd.DataFrame(
@@ -856,8 +1081,10 @@ reported = pd.DataFrame(
 
 reported["your_model"] = "ptm_cipher_full_3di"
 reported["your_dataset"] = "strict S2b cold-interface test"
-reported["your_auroc"] = float(own["auroc"])
-reported["your_auprc"] = float(own["auprc"])
+reported["your_auroc"] = float(own["auroc_mean"])
+reported["your_auroc_seed_sd"] = float(own["auroc_sd"]) if not pd.isna(own["auroc_sd"]) else np.nan
+reported["your_auprc"] = float(own["auprc_mean"])
+reported["your_auprc_seed_sd"] = float(own["auprc_sd"]) if not pd.isna(own["auprc_sd"]) else np.nan
 reported["delta_auroc_yours_minus_reported"] = reported["your_auroc"] - reported["reported_auroc"]
 reported["delta_auprc_yours_minus_reported"] = reported["your_auprc"] - reported["reported_auprc"]
 reported["beats_reported_auroc"] = reported["delta_auroc_yours_minus_reported"] > 0
@@ -877,7 +1104,9 @@ display_cols = [
     "reported_auroc",
     "reported_auprc",
     "your_auroc",
+    "your_auroc_seed_sd",
     "your_auprc",
+    "your_auprc_seed_sd",
     "delta_auroc_yours_minus_reported",
     "delta_auprc_yours_minus_reported",
     "beats_reported_auroc",
@@ -888,14 +1117,14 @@ display(reported[display_cols])
 
 best_reported_auprc = reported["reported_auprc"].max()
 best_reported_auroc = reported["reported_auroc"].max()
-print(f"Your strict S2b full-3Di AUROC: {own['auroc']:.4f}")
-print(f"Your strict S2b full-3Di AUPRC: {own['auprc']:.4f}")
+print(f"Your strict S2b full-3Di mean AUROC: {own['auroc_mean']:.4f} ± {own['auroc_sd']:.4f}")
+print(f"Your strict S2b full-3Di mean AUPRC: {own['auprc_mean']:.4f} ± {own['auprc_sd']:.4f}")
 print(f"Best reported literature AUROC in this table: {best_reported_auroc:.4f}")
 print(f"Best reported literature AUPRC in this table: {best_reported_auprc:.4f}")
 
-if own["auprc"] > best_reported_auprc and own["auroc"] > best_reported_auroc:
+if own["auprc_mean"] > best_reported_auprc and own["auroc_mean"] > best_reported_auroc:
     print("Numerically above the listed literature metrics, but still cross-study. Claim: promising; same-split validation still needed.")
-elif own["auprc"] > best_reported_auprc:
+elif own["auprc_mean"] > best_reported_auprc:
     print("AUPRC is numerically above the listed literature metrics, but AUROC is not. Be careful with SOTA language.")
 else:
     print("Not numerically above the strongest listed AUPRC. Better claim: stricter cold-interface evaluation plus real-3Di contribution.")

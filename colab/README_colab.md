@@ -45,11 +45,19 @@ The strict 3Di notebook downloads `ptm_cipher_3di_colab_outputs.zip` containing:
 - `ptm_cipher_3di_chain_failures.tsv`
 - `ptm_cipher_3di_ablation_metrics_colab.tsv`
 - `ptm_cipher_3di_ablation_history_colab.tsv`
+- `ptm_cipher_3di_ablation_predictions_colab.tsv`
+- `ptm_cipher_3di_repeated_seed_summary_colab.tsv`
+- `ptm_cipher_3di_seed_delta_summary_colab.tsv`
+- `ptm_cipher_3di_paired_bootstrap_deltas_colab.tsv`
+- `ptm_cipher_3di_claim_gate_colab.tsv`
+- `literature_metric_comparison_colab.tsv`
 - one best-state `.pt` file per ablation
 
 Use the strict 3Di metrics, not the prototype metrics, for any claim that the
 architecture benefits from real structure tokens. The notebook excludes rows
 without complete real 3Di coverage and fails if train/valid/test lack both labels.
+By default, it runs the full-capability PTM-CIPHER configuration across five
+seeds and all ablations; switch `FULL_CAPABILITY_MODE = False` only for debugging.
 
 ## Claim Policy
 

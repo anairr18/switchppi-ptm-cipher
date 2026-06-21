@@ -947,6 +947,128 @@ display(bootstrap_df.head(30))
 display(claim_gate_df)
 display(metrics_df.sort_values(["split", "model", "seed"]))
 
+# %% [markdown]
+# ## Post-Hoc Ensembles To Maximize AUROC/AUPRC
+#
+# These do not retrain the deep encoder. They use saved validation/test prediction
+# scores to test whether averaging seeds or stacking architecture variants improves
+# ranking metrics. This is the fastest way to improve AUROC/AUPRC after the full run.
+
+# %%
+from sklearn.linear_model import LogisticRegression
+
+def metric_row_from_scores(name, split_name, y, p):
+    threshold = choose_threshold(y, p)
+    row = metric_row(name, split_name, y, p, threshold)
+    row["threshold_source"] = "same_split_for_summary_only" if split_name.startswith("valid") else "validation_stack_or_mean"
+    return row
+
+def average_prediction_table(preds, models, split):
+    sub = preds[preds["split"].eq(split) & preds["model"].isin(models)].copy()
+    if sub.empty:
+        return pd.DataFrame()
+    grouped = (
+        sub.groupby("event_id", as_index=False)
+        .agg(
+            label_binary=("label_binary", "first"),
+            pred_score=("pred_score", "mean"),
+            component_models=("model", lambda x: ",".join(sorted(set(x)))),
+            component_count=("pred_score", "size"),
+        )
+    )
+    return grouped
+
+ensemble_rows = []
+ensemble_predictions = []
+ensemble_model_sets = {
+    "ensemble_full_3di_seeds": ["ptm_cipher_full_3di"],
+    "ensemble_no_adversary_seeds": ["no_adversary"],
+    "ensemble_top3_seed_models": ["no_adversary", "no_delta_head", "ptm_cipher_full_3di"],
+    "ensemble_all_architectures": ABLATIONS_TO_RUN,
+}
+
+for ensemble_name, models in ensemble_model_sets.items():
+    valid_avg = average_prediction_table(predictions_df, models, "valid_best")
+    test_avg = average_prediction_table(predictions_df, models, "test")
+    if valid_avg.empty or test_avg.empty:
+        continue
+    valid_metric = metric_row_from_scores(ensemble_name, "valid_best", valid_avg["label_binary"].to_numpy(), valid_avg["pred_score"].to_numpy())
+    test_metric = metric_row_from_scores(ensemble_name, "test", test_avg["label_binary"].to_numpy(), test_avg["pred_score"].to_numpy())
+    valid_metric["component_models"] = ",".join(models)
+    test_metric["component_models"] = ",".join(models)
+    ensemble_rows.extend([valid_metric, test_metric])
+    for split_name, frame in [("valid_best", valid_avg), ("test", test_avg)]:
+        out = frame.copy()
+        out["model"] = ensemble_name
+        out["split"] = split_name
+        ensemble_predictions.append(out)
+
+# Validation-trained score stack. This is often better than simple averaging,
+# but the claim should say "score-level ensemble", not a new architecture.
+stack_models = ["no_adversary", "no_delta_head", "ptm_cipher_full_3di", "no_contacts", "no_3di"]
+valid_stack = predictions_df[predictions_df["split"].eq("valid_best") & predictions_df["model"].isin(stack_models)]
+test_stack = predictions_df[predictions_df["split"].eq("test") & predictions_df["model"].isin(stack_models)]
+valid_wide = valid_stack.pivot_table(index="event_id", columns="model", values="pred_score", aggfunc="mean")
+test_wide = test_stack.pivot_table(index="event_id", columns="model", values="pred_score", aggfunc="mean")
+valid_labels = valid_stack.groupby("event_id")["label_binary"].first()
+test_labels = test_stack.groupby("event_id")["label_binary"].first()
+common_cols = [c for c in stack_models if c in valid_wide.columns and c in test_wide.columns]
+if common_cols and len(valid_wide) and len(test_wide):
+    stacker = LogisticRegression(class_weight="balanced", max_iter=1000, random_state=SEED)
+    stacker.fit(valid_wide[common_cols].fillna(valid_wide[common_cols].mean()), valid_labels.loc[valid_wide.index])
+    valid_score = stacker.predict_proba(valid_wide[common_cols].fillna(valid_wide[common_cols].mean()))[:, 1]
+    test_score = stacker.predict_proba(test_wide[common_cols].fillna(valid_wide[common_cols].mean()))[:, 1]
+    valid_metric = metric_row_from_scores(
+        "score_stack_top_models",
+        "valid_best",
+        valid_labels.loc[valid_wide.index].to_numpy(),
+        valid_score,
+    )
+    test_metric = metric_row_from_scores(
+        "score_stack_top_models",
+        "test",
+        test_labels.loc[test_wide.index].to_numpy(),
+        test_score,
+    )
+    valid_metric["component_models"] = ",".join(common_cols)
+    test_metric["component_models"] = ",".join(common_cols)
+    valid_metric["stack_coefficients"] = json.dumps(dict(zip(common_cols, stacker.coef_[0].round(6).tolist())))
+    test_metric["stack_coefficients"] = valid_metric["stack_coefficients"]
+    ensemble_rows.extend([valid_metric, test_metric])
+    for split_name, index, labels, scores in [
+        ("valid_best", valid_wide.index, valid_labels, valid_score),
+        ("test", test_wide.index, test_labels, test_score),
+    ]:
+        ensemble_predictions.append(
+            pd.DataFrame(
+                {
+                    "event_id": index,
+                    "label_binary": labels.loc[index].to_numpy(),
+                    "pred_score": scores,
+                    "model": "score_stack_top_models",
+                    "split": split_name,
+                    "component_models": ",".join(common_cols),
+                    "component_count": len(common_cols),
+                }
+            )
+        )
+
+ensemble_metrics_df = pd.DataFrame(ensemble_rows)
+ensemble_predictions_df = pd.concat(ensemble_predictions, ignore_index=True) if ensemble_predictions else pd.DataFrame()
+ensemble_metrics_df.to_csv(OUT / "ptm_cipher_3di_ensemble_metrics_colab.tsv", sep="\t", index=False)
+ensemble_predictions_df.to_csv(OUT / "ptm_cipher_3di_ensemble_predictions_colab.tsv", sep="\t", index=False)
+
+single_best = summary_df[["model", "auprc_mean", "auroc_mean", "mcc_mean"]].copy()
+single_best["kind"] = "single_model_repeated_seed_mean"
+single_best = single_best.rename(columns={"auprc_mean": "auprc", "auroc_mean": "auroc", "mcc_mean": "mcc"})
+ensemble_best = ensemble_metrics_df[ensemble_metrics_df["split"].eq("test")][["model", "auprc", "auroc", "mcc"]].copy()
+ensemble_best["kind"] = "posthoc_ensemble_test"
+leaderboard = pd.concat([single_best, ensemble_best], ignore_index=True).sort_values("auprc", ascending=False)
+leaderboard.to_csv(OUT / "ptm_cipher_3di_model_leaderboard_colab.tsv", sep="\t", index=False)
+
+display(ensemble_metrics_df.sort_values(["split", "auprc"], ascending=[True, False]))
+display(leaderboard)
+
 # %%
 full_summary = summary_df[summary_df["model"].eq("ptm_cipher_full_3di")]
 no_3di_summary = summary_df[summary_df["model"].eq("no_3di")]

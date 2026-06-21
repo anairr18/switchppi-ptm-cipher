@@ -50,6 +50,9 @@ The strict 3Di notebook downloads `ptm_cipher_3di_colab_outputs.zip` containing:
 - `ptm_cipher_3di_seed_delta_summary_colab.tsv`
 - `ptm_cipher_3di_paired_bootstrap_deltas_colab.tsv`
 - `ptm_cipher_3di_claim_gate_colab.tsv`
+- `ptm_cipher_3di_ensemble_metrics_colab.tsv`
+- `ptm_cipher_3di_ensemble_predictions_colab.tsv`
+- `ptm_cipher_3di_model_leaderboard_colab.tsv`
 - `literature_metric_comparison_colab.tsv`
 - one best-state `.pt` file per ablation
 

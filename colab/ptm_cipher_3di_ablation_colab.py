@@ -76,6 +76,43 @@ GITHUB_BRANCH = "main"
 RELEASE_TAG = "colab-data-v1"
 USE_GITHUB_INPUTS = True
 
+def download_with_retries(url, out_path, min_bytes=1, attempts=5):
+    out_path = Path(out_path)
+    if out_path.exists() and out_path.stat().st_size >= min_bytes:
+        print("using cached download:", out_path, f"{out_path.stat().st_size:,} bytes")
+        return out_path
+    last_error = None
+    for attempt in range(1, attempts + 1):
+        try:
+            print(f"download attempt {attempt}/{attempts}:", url)
+            urllib.request.urlretrieve(url, out_path)
+            if out_path.stat().st_size < min_bytes:
+                raise RuntimeError(f"download too small: {out_path.stat().st_size:,} bytes < {min_bytes:,}")
+            return out_path
+        except Exception as exc:
+            last_error = exc
+            print("urllib download failed:", repr(exc))
+            if out_path.exists():
+                out_path.unlink()
+    print("falling back to curl with retries")
+    cmd = [
+        "curl",
+        "-L",
+        "--fail",
+        "--retry",
+        "8",
+        "--retry-delay",
+        "10",
+        "--retry-all-errors",
+        "-o",
+        str(out_path),
+        url,
+    ]
+    subprocess.run(cmd, check=True)
+    if out_path.stat().st_size < min_bytes:
+        raise RuntimeError(f"curl download too small: {out_path.stat().st_size:,} bytes < {min_bytes:,}") from last_error
+    return out_path
+
 print("device:", DEVICE)
 
 # %% [markdown]
@@ -88,8 +125,7 @@ print("device:", DEVICE)
 if USE_GITHUB_INPUTS:
     small_zip = Path("/content/ptmppi_shield_colab_inputs.zip")
     url = f"https://raw.githubusercontent.com/{GITHUB_REPO}/{GITHUB_BRANCH}/colab/ptmppi_shield_colab_inputs.zip"
-    print("downloading:", url)
-    urllib.request.urlretrieve(url, small_zip)
+    download_with_retries(url, small_zip, min_bytes=1_000_000)
 else:
     uploaded = files.upload()
     small_zips = [name for name in uploaded if name.endswith(".zip") and "ptmppi_shield_colab_inputs" in name]
@@ -135,8 +171,7 @@ STRUCTURE_ZIP_DRIVE_PATH = "/content/drive/MyDrive/ptmint_protein_structure_info
 if USE_GITHUB_INPUTS:
     structure_zip = Path("/content/ptmint_protein_structure_information.zip")
     url = f"https://github.com/{GITHUB_REPO}/releases/download/{RELEASE_TAG}/ptmint_protein_structure_information.zip"
-    print("downloading:", url)
-    urllib.request.urlretrieve(url, structure_zip)
+    download_with_retries(url, structure_zip, min_bytes=500_000_000)
 elif USE_DRIVE_FOR_STRUCTURE_ZIP:
     drive.mount("/content/drive")
     structure_zip = Path(STRUCTURE_ZIP_DRIVE_PATH)

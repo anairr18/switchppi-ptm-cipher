@@ -26,6 +26,7 @@ class PTMCipherConfig:
     graph_layers: int = 3
     classes: int = 2
     head_input: str = "delta"
+    fusion_dim: int = 0
     adversary_dims: dict[str, int] | None = None
 
 
@@ -146,13 +147,25 @@ class PTMCipher(nn.Module):
         self.cross_attention = InterfaceCrossAttention(config)
         self.graph = DenseContactPropagation(config)
         self.delta_norm = nn.LayerNorm(config.dim)
+        head_width = config.dim
+        if config.head_input == "concat":
+            head_width = config.dim * 4
+        self.fusion_projection = None
+        if config.fusion_dim > 0:
+            self.fusion_projection = nn.Sequential(
+                nn.LayerNorm(config.fusion_dim),
+                nn.Linear(config.fusion_dim, config.dim),
+                nn.GELU(),
+                nn.Dropout(config.dropout),
+            )
+            head_width += config.dim
         self.classifier = nn.Sequential(
-            nn.Linear(config.dim, config.dim),
+            nn.Linear(head_width, config.dim),
             nn.GELU(),
             nn.Dropout(config.dropout),
             nn.Linear(config.dim, config.classes),
         )
-        self.evidence = nn.Sequential(nn.Linear(config.dim, config.classes), nn.Softplus())
+        self.evidence = nn.Sequential(nn.Linear(head_width, config.classes), nn.Softplus())
         self.grl = GradientReversal(alpha=1.0)
         self.adversaries = nn.ModuleDict()
         for name, width in (config.adversary_dims or {}).items():
@@ -202,6 +215,7 @@ class PTMCipher(nn.Module):
         contact_mask: torch.Tensor,
         residue_adjacency: torch.Tensor,
         adversary_alpha: float = 1.0,
+        fusion_features: torch.Tensor | None = None,
     ) -> dict[str, torch.Tensor]:
         partner_ptm = torch.zeros_like(partner_residue_ids)
         h_unmod = self._encode(mod_residue_ids, mod_structure_ids, unmod_ptm_state_ids, mod_mask)
@@ -225,8 +239,14 @@ class PTMCipher(nn.Module):
             head_vec = self.delta_norm(i_mod)
         elif self.config.head_input == "unmodified":
             head_vec = self.delta_norm(i_unmod)
+        elif self.config.head_input == "concat":
+            head_vec = torch.cat([i_mod, i_unmod, delta, torch.abs(delta)], dim=-1)
         else:
             head_vec = delta
+        if self.fusion_projection is not None:
+            if fusion_features is None:
+                raise ValueError("PTMCipherConfig.fusion_dim > 0 requires fusion_features in forward().")
+            head_vec = torch.cat([head_vec, self.fusion_projection(fusion_features.float())], dim=-1)
         logits = self.classifier(head_vec)
         evidence_alpha = self.evidence(head_vec) + 1.0
 
@@ -248,10 +268,11 @@ def ptm_cipher_loss(
     adversary_targets: dict[str, torch.Tensor] | None = None,
     lambda_brier: float = 0.1,
     lambda_adversary: float = 0.2,
+    class_weights: torch.Tensor | None = None,
 ) -> dict[str, torch.Tensor]:
     logits = outputs["logits"]
     probs = logits.softmax(dim=-1)
-    cls = F.cross_entropy(logits, labels)
+    cls = F.cross_entropy(logits, labels, weight=class_weights)
     one_hot = F.one_hot(labels, num_classes=logits.shape[-1]).float()
     brier = ((probs - one_hot) ** 2).sum(dim=-1).mean()
     adv_loss = logits.new_tensor(0.0)

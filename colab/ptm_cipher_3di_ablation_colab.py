@@ -678,6 +678,7 @@ def evaluate(model, loader):
                 batch["contact_mask"],
                 batch["residue_adjacency"],
                 adversary_alpha=0.0,
+                fusion_features=batch.get("fusion_features"),
             )
             loss = ptm_cipher_loss(out, batch["label"], lambda_brier=0.05, lambda_adversary=0.0)["loss"]
             losses.append(float(loss.detach().cpu()))
@@ -773,6 +774,7 @@ def train_one(ablation, seed):
                     batch["contact_mask"],
                     batch["residue_adjacency"],
                     adversary_alpha=0.0 if ablation == "no_adversary" else min(1.0, epoch / 3),
+                    fusion_features=batch.get("fusion_features"),
                 )
                 loss_dict = ptm_cipher_loss(
                     out,
@@ -1380,6 +1382,369 @@ if RUN_SAME_SPLIT_COMPETITORS:
     same_split_competitor_audit_df.to_csv(OUT / "same_split_competitor_audit_colab.tsv", sep="\t", index=False)
     display(same_split_competitor_metrics_df[same_split_competitor_metrics_df["split"].eq("test")].sort_values("auprc", ascending=False))
     display(same_split_competitor_audit_df)
+
+# %% [markdown]
+# ## PTM-CIPHER + ESM2 Fusion Challenge
+#
+# This is the performance-oriented model to test after the baseline table shows
+# that ESM2 + random forest is strong. It keeps the real 3Di/contact/PTM-state
+# PTM-CIPHER encoder, disables the adversary for the headline predictor, uses a
+# concat counterfactual head, and fuses frozen ESM2 site/local/protein embeddings.
+
+# %%
+RUN_PTM_CIPHER_ESM_FUSION = True
+RUN_FUSION_NO_3DI_ABLATION = True
+FUSION_SEEDS = SEEDS_TO_RUN
+FUSION_EPOCHS = 14 if FULL_CAPABILITY_MODE else 6
+FUSION_BATCH_SIZE = BATCH_SIZE
+FUSION_LR = 1.5e-4
+FUSION_WEIGHT_DECAY = 2e-4
+FUSION_PRESET = {
+    "preset": "esm2_fusion_performance" if FULL_CAPABILITY_MODE else "esm2_fusion_debug",
+    "dim": 192 if FULL_CAPABILITY_MODE else 128,
+    "heads": 6 if FULL_CAPABILITY_MODE else 4,
+    "layers": 2 if FULL_CAPABILITY_MODE else 1,
+    "ff_dim": 512 if FULL_CAPABILITY_MODE else 384,
+    "dropout": 0.20 if FULL_CAPABILITY_MODE else 0.25,
+    "graph_layers": 2 if FULL_CAPABILITY_MODE else 1,
+}
+
+def ensure_esm2_cache_for_fusion():
+    global seq_cache, ESM_DIM, tokenizer, esm_model, clean_aa
+    if "seq_cache" in globals() and "ESM_DIM" in globals():
+        return
+    from transformers import AutoTokenizer, EsmModel
+
+    AA = set("ACDEFGHIKLMNPQRSTVWY")
+
+    def clean_aa(seq):
+        return "".join(a if a in AA else "X" for a in str(seq).upper())
+
+    tokenizer = AutoTokenizer.from_pretrained(ESM2_MODEL_NAME)
+    esm_model = EsmModel.from_pretrained(ESM2_MODEL_NAME).to(DEVICE)
+    esm_model.eval()
+
+    def embed_token_sequences_for_fusion(seqs, batch_size=8, max_len=1022):
+        seqs = [clean_aa(s)[:max_len] for s in seqs]
+        unique = sorted(set(seqs))
+        if ESM_CACHE.exists():
+            with ESM_CACHE.open("rb") as fh:
+                cache = pickle.load(fh)
+        else:
+            cache = {}
+        missing = [s for s in unique if s not in cache]
+        for i in tqdm(range(0, len(missing), batch_size), desc="ESM2 token embeddings for fusion"):
+            batch = missing[i : i + batch_size]
+            encoded = tokenizer(batch, return_tensors="pt", padding=True, truncation=True, max_length=max_len + 2)
+            encoded = {k: v.to(DEVICE) for k, v in encoded.items()}
+            with torch.no_grad():
+                hidden = esm_model(**encoded).last_hidden_state.detach().cpu().numpy().astype("float32")
+            for j, seq in enumerate(batch):
+                cache[seq] = hidden[j, 1 : 1 + len(seq)].astype("float16")
+            with ESM_CACHE.open("wb") as fh:
+                pickle.dump(cache, fh)
+        with ESM_CACHE.open("wb") as fh:
+            pickle.dump(cache, fh)
+        return cache
+
+    seq_cache = embed_token_sequences_for_fusion(
+        list(strict_manifest["mod_seq_crop"].astype(str)) + list(strict_manifest["partner_seq_crop"].astype(str))
+    )
+    ESM_DIM = int(next(iter(seq_cache.values())).shape[1])
+
+def count_contact_pairs(row):
+    total = 0
+    site_contacts = 0
+    ptm_index = int(row.ptm_index_crop_0based)
+    for pair in str(row.contact_pairs_crop).split(";"):
+        if not pair or ":" not in pair:
+            continue
+        try:
+            i, _ = [int(x) for x in pair.split(":")]
+        except ValueError:
+            continue
+        total += 1
+        if i == ptm_index:
+            site_contacts += 1
+    return total, site_contacts
+
+def esm2_fusion_vector(row):
+    mod_seq = clean_aa(row.mod_seq_crop)[:1022]
+    partner_seq = clean_aa(row.partner_seq_crop)[:1022]
+    mod = np.asarray(seq_cache[mod_seq], dtype=np.float32)
+    partner = np.asarray(seq_cache[partner_seq], dtype=np.float32)
+    ptm_index = int(max(0, min(int(row.ptm_index_crop_0based), len(mod) - 1)))
+    local = mod[max(0, ptm_index - 15) : min(len(mod), ptm_index + 16)]
+    site_vec = mod[ptm_index]
+    local_mean = local.mean(axis=0)
+    mod_mean = mod.mean(axis=0)
+    partner_mean = partner.mean(axis=0)
+    pair_abs_delta = np.abs(mod_mean - partner_mean)
+    total_contacts, site_contacts = count_contact_pairs(row)
+    scalars = np.asarray(
+        [
+            ptm_index / max(1, len(mod) - 1),
+            len(local) / 31.0,
+            np.log1p(total_contacts),
+            np.log1p(site_contacts),
+            float(site_contacts > 0),
+        ],
+        dtype=np.float32,
+    )
+    return np.concatenate([site_vec, local_mean, mod_mean, partner_mean, pair_abs_delta, scalars]).astype(np.float32)
+
+class PTMCipherESM2FusionDataset(Strict3DiCipherDataset):
+    def __getitem__(self, idx):
+        item = super().__getitem__(idx)
+        row = self.frame.iloc[idx]
+        item["fusion_features"] = esm2_fusion_vector(row)
+        return item
+
+def class_weight_tensor(frame):
+    counts = np.bincount(frame["label_binary"].to_numpy(int), minlength=2).astype(np.float32)
+    weights = counts.sum() / (2.0 * np.maximum(counts, 1.0))
+    return torch.as_tensor(weights, dtype=torch.float32, device=DEVICE)
+
+def train_fusion_one(model_name, seed, structure_ablation):
+    reset_run_seed(seed)
+    train_generator = torch.Generator().manual_seed(seed)
+    train_loader = DataLoader(
+        PTMCipherESM2FusionDataset(train_df, structure_ablation),
+        batch_size=FUSION_BATCH_SIZE,
+        shuffle=True,
+        collate_fn=collate,
+        num_workers=0,
+        generator=train_generator,
+    )
+    valid_loader = DataLoader(
+        PTMCipherESM2FusionDataset(valid_df, structure_ablation),
+        batch_size=FUSION_BATCH_SIZE * 2,
+        shuffle=False,
+        collate_fn=collate,
+        num_workers=0,
+    )
+    test_loader = DataLoader(
+        PTMCipherESM2FusionDataset(test_df, structure_ablation),
+        batch_size=FUSION_BATCH_SIZE * 2,
+        shuffle=False,
+        collate_fn=collate,
+        num_workers=0,
+    )
+    sample_vec = esm2_fusion_vector(train_df.iloc[0])
+    config = PTMCipherConfig(
+        dim=FUSION_PRESET["dim"],
+        heads=FUSION_PRESET["heads"],
+        layers=FUSION_PRESET["layers"],
+        ff_dim=FUSION_PRESET["ff_dim"],
+        dropout=FUSION_PRESET["dropout"],
+        graph_layers=FUSION_PRESET["graph_layers"],
+        classes=2,
+        head_input="concat",
+        fusion_dim=int(sample_vec.shape[0]),
+        adversary_dims=None,
+    )
+    model = PTMCipher(config).to(DEVICE)
+    opt = torch.optim.AdamW(model.parameters(), lr=FUSION_LR, weight_decay=FUSION_WEIGHT_DECAY)
+    scaler = torch.cuda.amp.GradScaler(enabled=USE_AMP)
+    weights = class_weight_tensor(train_df)
+    best_score = -1
+    best_state = None
+    history = []
+    for epoch in range(1, FUSION_EPOCHS + 1):
+        model.train()
+        train_losses = []
+        for batch in tqdm(train_loader, desc=f"{model_name} seed {seed} epoch {epoch}", leave=False):
+            batch = move(batch)
+            with torch.cuda.amp.autocast(enabled=USE_AMP):
+                out = model(
+                    batch["mod_residue_ids"],
+                    batch["mod_structure_ids"],
+                    batch["mod_ptm_state_ids"],
+                    batch["unmod_ptm_state_ids"],
+                    batch["mod_mask"],
+                    batch["partner_residue_ids"],
+                    batch["partner_structure_ids"],
+                    batch["partner_mask"],
+                    batch["ptm_index"],
+                    batch["contact_mask"],
+                    batch["residue_adjacency"],
+                    adversary_alpha=0.0,
+                    fusion_features=batch["fusion_features"],
+                )
+                loss_dict = ptm_cipher_loss(
+                    out,
+                    batch["label"],
+                    lambda_brier=0.03,
+                    lambda_adversary=0.0,
+                    class_weights=weights,
+                )
+            loss = loss_dict["loss"]
+            opt.zero_grad(set_to_none=True)
+            scaler.scale(loss).backward()
+            scaler.unscale_(opt)
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+            scaler.step(opt)
+            scaler.update()
+            train_losses.append(float(loss.detach().cpu()))
+        y_valid, p_valid, valid_loss = evaluate(model, valid_loader)
+        threshold = choose_threshold(y_valid, p_valid)
+        row = metric_row(model_name, "valid", y_valid, p_valid, threshold)
+        row.update(
+            {
+                "seed": seed,
+                "epoch": epoch,
+                "train_loss": float(np.mean(train_losses)),
+                "valid_loss": valid_loss,
+                "model_preset": FUSION_PRESET["preset"],
+                "structure_ablation": structure_ablation,
+            }
+        )
+        history.append(row)
+        print(row)
+        if row["auprc"] > best_score:
+            best_score = row["auprc"]
+            best_state = {key: value.detach().cpu() for key, value in model.state_dict().items()}
+    model.load_state_dict(best_state)
+    y_valid, p_valid, valid_loss = evaluate(model, valid_loader)
+    threshold = choose_threshold(y_valid, p_valid)
+    y_test, p_test, test_loss = evaluate(model, test_loader)
+    rows = []
+    preds = []
+    for split_name, frame, y, p, loss_value in [
+        ("valid_best", valid_df, y_valid, p_valid, valid_loss),
+        ("test", test_df, y_test, p_test, test_loss),
+    ]:
+        row = metric_row(model_name, split_name, y, p, threshold)
+        row.update(
+            {
+                "seed": seed,
+                "best_valid_auprc": float(best_score),
+                "loss": loss_value,
+                "model_preset": FUSION_PRESET["preset"],
+                "structure_ablation": structure_ablation,
+                "fusion_dim": int(sample_vec.shape[0]),
+            }
+        )
+        rows.append(row)
+        preds.append(prediction_frame(frame, model_name, seed, split_name, y, p, threshold))
+    torch.save(best_state, OUT / f"{model_name}_seed{seed}_best_state.pt")
+    return history, rows, preds
+
+fusion_history = []
+fusion_metrics = []
+fusion_predictions = []
+if RUN_PTM_CIPHER_ESM_FUSION:
+    ensure_esm2_cache_for_fusion()
+    if "esm_model" in globals():
+        del esm_model
+        torch.cuda.empty_cache()
+    fusion_specs = [("ptm_cipher_esm2_fusion", "ptm_cipher_full_3di")]
+    if RUN_FUSION_NO_3DI_ABLATION:
+        fusion_specs.append(("ptm_cipher_esm2_fusion_no_3di", "no_3di"))
+    for seed in FUSION_SEEDS:
+        for model_name, structure_ablation in fusion_specs:
+            history, rows, preds = train_fusion_one(model_name, seed, structure_ablation)
+            fusion_history.extend(history)
+            fusion_metrics.extend(rows)
+            fusion_predictions.extend(preds)
+            pd.DataFrame(fusion_history).to_csv(OUT / "ptm_cipher_esm2_fusion_history_colab.tsv", sep="\t", index=False)
+            pd.DataFrame(fusion_metrics).to_csv(OUT / "ptm_cipher_esm2_fusion_metrics_colab.tsv", sep="\t", index=False)
+            pd.concat(fusion_predictions, ignore_index=True).to_csv(
+                OUT / "ptm_cipher_esm2_fusion_predictions_colab.tsv", sep="\t", index=False
+            )
+
+fusion_metrics_df = pd.DataFrame(fusion_metrics)
+fusion_predictions_df = pd.concat(fusion_predictions, ignore_index=True) if fusion_predictions else pd.DataFrame()
+if not fusion_metrics_df.empty:
+    fusion_summary_df = (
+        fusion_metrics_df[fusion_metrics_df["split"].eq("test")]
+        .groupby("model", as_index=False)
+        .agg(
+            seeds=("seed", "nunique"),
+            n=("n", "mean"),
+            auprc_mean=("auprc", "mean"),
+            auprc_sd=("auprc", "std"),
+            auprc_min=("auprc", "min"),
+            auprc_max=("auprc", "max"),
+            auroc_mean=("auroc", "mean"),
+            auroc_sd=("auroc", "std"),
+            mcc_mean=("mcc", "mean"),
+            balanced_accuracy_mean=("balanced_accuracy", "mean"),
+            macro_f1_mean=("macro_f1", "mean"),
+        )
+        .sort_values("auprc_mean", ascending=False)
+    )
+    fusion_summary_df.to_csv(OUT / "ptm_cipher_esm2_fusion_summary_colab.tsv", sep="\t", index=False)
+    display(fusion_summary_df)
+
+    competitor_metrics_path = OUT / "same_split_competitor_metrics_colab.tsv"
+    competitor_predictions_path = OUT / "same_split_competitor_predictions_colab.tsv"
+    if "same_split_competitor_metrics_df" not in globals() and competitor_metrics_path.exists():
+        same_split_competitor_metrics_df = pd.read_csv(competitor_metrics_path, sep="\t")
+    if "same_split_competitor_predictions_df" not in globals() and competitor_predictions_path.exists():
+        same_split_competitor_predictions_df = pd.read_csv(competitor_predictions_path, sep="\t")
+
+    leaderboard_parts = [fusion_metrics_df[fusion_metrics_df["split"].eq("test")].assign(result_family="ptm_cipher_esm2_fusion")]
+    if "same_split_competitor_metrics_df" in globals():
+        leaderboard_parts.append(
+            same_split_competitor_metrics_df[same_split_competitor_metrics_df["split"].eq("test")].assign(
+                result_family="same_split_competitor"
+            )
+        )
+    if "metrics_df" in globals():
+        leaderboard_parts.append(metrics_df[metrics_df["split"].eq("test")].assign(result_family="ptm_cipher_ablation"))
+    fusion_challenge_metrics = pd.concat(leaderboard_parts, ignore_index=True, sort=False)
+    fusion_challenge_summary = (
+        fusion_challenge_metrics.groupby(["result_family", "model"], as_index=False)
+        .agg(
+            seeds=("seed", "nunique"),
+            n=("n", "mean"),
+            auprc_mean=("auprc", "mean"),
+            auprc_sd=("auprc", "std"),
+            auroc_mean=("auroc", "mean"),
+            auroc_sd=("auroc", "std"),
+            mcc_mean=("mcc", "mean"),
+            balanced_accuracy_mean=("balanced_accuracy", "mean"),
+            macro_f1_mean=("macro_f1", "mean"),
+        )
+        .sort_values(["auprc_mean", "auroc_mean"], ascending=False)
+    )
+    fusion_challenge_summary.to_csv(OUT / "ptm_cipher_fusion_challenge_leaderboard_colab.tsv", sep="\t", index=False)
+    display(fusion_challenge_summary.head(20))
+
+    challenge_rows = []
+    if "same_split_competitor_predictions_df" in globals():
+        rf_pred = same_split_competitor_predictions_df[
+            same_split_competitor_predictions_df["model"].eq("esm2_same_split_random_forest")
+            & same_split_competitor_predictions_df["split"].eq("test")
+        ]
+        fusion_test_pred = fusion_predictions_df[fusion_predictions_df["split"].eq("test")]
+        for model_name in sorted(fusion_test_pred["model"].unique()):
+            for seed in sorted(set(fusion_test_pred["seed"]).intersection(set(rf_pred["seed"]))):
+                ours = fusion_test_pred[(fusion_test_pred["model"].eq(model_name)) & (fusion_test_pred["seed"].eq(seed))]
+                base = rf_pred[rf_pred["seed"].eq(seed)]
+                merged = ours[["event_id", "label_binary", "pred_score"]].merge(
+                    base[["event_id", "pred_score"]],
+                    on="event_id",
+                    suffixes=("_fusion", "_esm2_rf"),
+                )
+                if merged.empty:
+                    continue
+                for metric in ["auprc", "auroc"]:
+                    stats = paired_bootstrap_delta(
+                        merged["label_binary"].to_numpy(),
+                        merged["pred_score_fusion"].to_numpy(),
+                        merged["pred_score_esm2_rf"].to_numpy(),
+                        metric=metric,
+                        bootstraps=BOOTSTRAPS,
+                        seed=seed,
+                    )
+                    stats.update({"model": model_name, "baseline": "esm2_same_split_random_forest", "seed": seed, "metric": metric})
+                    challenge_rows.append(stats)
+        fusion_vs_rf_df = pd.DataFrame(challenge_rows)
+        fusion_vs_rf_df.to_csv(OUT / "ptm_cipher_esm2_fusion_vs_rf_bootstrap_colab.tsv", sep="\t", index=False)
+        if not fusion_vs_rf_df.empty:
+            display(fusion_vs_rf_df)
 
 # %% [markdown]
 # ## Post-Hoc Ensembles To Maximize AUROC/AUPRC

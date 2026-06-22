@@ -56,6 +56,11 @@ The strict 3Di notebook downloads `ptm_cipher_3di_colab_outputs.zip` containing:
 - `same_split_competitor_metrics_colab.tsv`
 - `same_split_competitor_predictions_colab.tsv`
 - `same_split_competitor_audit_colab.tsv`
+- `ptm_cipher_esm2_fusion_metrics_colab.tsv`
+- `ptm_cipher_esm2_fusion_predictions_colab.tsv`
+- `ptm_cipher_esm2_fusion_summary_colab.tsv`
+- `ptm_cipher_fusion_challenge_leaderboard_colab.tsv`
+- `ptm_cipher_esm2_fusion_vs_rf_bootstrap_colab.tsv`
 - `literature_metric_comparison_colab.tsv`
 - one best-state `.pt` file per ablation
 
@@ -64,6 +69,12 @@ architecture benefits from real structure tokens. The notebook excludes rows
 without complete real 3Di coverage and fails if train/valid/test lack both labels.
 By default, it runs the full-capability PTM-CIPHER configuration across five
 seeds and all ablations; switch `FULL_CAPABILITY_MODE = False` only for debugging.
+
+The ESM2 fusion challenge section is the performance path after the same-split
+competitor reruns. It trains `ptm_cipher_esm2_fusion`, a no-adversary
+counterfactual-concat PTM-CIPHER model with frozen ESM2 site/local/protein
+features, then compares it directly against `esm2_same_split_random_forest` by
+seed and paired bootstrap.
 
 ## Claim Policy
 

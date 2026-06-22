@@ -76,6 +76,13 @@ counterfactual-concat PTM-CIPHER model with frozen ESM2 site/local/protein
 features, then compares it directly against `esm2_same_split_random_forest` by
 seed and paired bootstrap.
 
+By default, the fusion section uses `FUSION_RUN_MODE = "a100_quick_screen"`:
+two seeds, ten epochs, and only the full 3Di fusion model. This is meant to
+answer quickly whether the fusion idea can challenge ESM2 random forest on an
+A100. If the signal looks good, change the single knob to
+`FUSION_RUN_MODE = "publication_full"` for five seeds plus the no-3Di fusion
+ablation.
+
 ## Claim Policy
 
 If PTM-Mamba checkpoints are not supplied in Drive, report PTM-Mamba as blocked, not reproduced.

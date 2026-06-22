@@ -1393,9 +1393,17 @@ if RUN_SAME_SPLIT_COMPETITORS:
 
 # %%
 RUN_PTM_CIPHER_ESM_FUSION = True
-RUN_FUSION_NO_3DI_ABLATION = True
-FUSION_SEEDS = SEEDS_TO_RUN
-FUSION_EPOCHS = 14 if FULL_CAPABILITY_MODE else 6
+FUSION_RUN_MODE = "a100_quick_screen"  # options: "a100_quick_screen", "publication_full"
+if FUSION_RUN_MODE == "a100_quick_screen":
+    FUSION_SEEDS = [4242, 1337]
+    FUSION_EPOCHS = 10
+    RUN_FUSION_NO_3DI_ABLATION = False
+elif FUSION_RUN_MODE == "publication_full":
+    FUSION_SEEDS = SEEDS_TO_RUN
+    FUSION_EPOCHS = 14 if FULL_CAPABILITY_MODE else 6
+    RUN_FUSION_NO_3DI_ABLATION = True
+else:
+    raise ValueError(f"Unknown FUSION_RUN_MODE: {FUSION_RUN_MODE}")
 FUSION_BATCH_SIZE = BATCH_SIZE
 FUSION_LR = 1.5e-4
 FUSION_WEIGHT_DECAY = 2e-4
@@ -1408,6 +1416,16 @@ FUSION_PRESET = {
     "dropout": 0.20 if FULL_CAPABILITY_MODE else 0.25,
     "graph_layers": 2 if FULL_CAPABILITY_MODE else 1,
 }
+print(
+    "fusion mode:",
+    FUSION_RUN_MODE,
+    "| seeds:",
+    FUSION_SEEDS,
+    "| epochs:",
+    FUSION_EPOCHS,
+    "| no_3di ablation:",
+    RUN_FUSION_NO_3DI_ABLATION,
+)
 
 def ensure_esm2_cache_for_fusion():
     global seq_cache, ESM_DIM, tokenizer, esm_model, clean_aa
@@ -1596,6 +1614,7 @@ def train_fusion_one(model_name, seed, structure_ablation):
                 "train_loss": float(np.mean(train_losses)),
                 "valid_loss": valid_loss,
                 "model_preset": FUSION_PRESET["preset"],
+                "fusion_run_mode": FUSION_RUN_MODE,
                 "structure_ablation": structure_ablation,
             }
         )
@@ -1621,6 +1640,7 @@ def train_fusion_one(model_name, seed, structure_ablation):
                 "best_valid_auprc": float(best_score),
                 "loss": loss_value,
                 "model_preset": FUSION_PRESET["preset"],
+                "fusion_run_mode": FUSION_RUN_MODE,
                 "structure_ablation": structure_ablation,
                 "fusion_dim": int(sample_vec.shape[0]),
             }
